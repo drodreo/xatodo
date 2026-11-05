@@ -1,0 +1,17 @@
+# Rust build artifacts
+target/
+
+# Frontend
+node_modules/
+dist/
+
+# Runtime data (sqlite database files)
+data/
+*.db
+
+# The real config carries apikeys and never enters the repository
+# (config.example.toml uses a different name and is tracked normally)
+config.toml
+
+# Python bytecode cache
+__pycache__/

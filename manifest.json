@@ -1,0 +1,22 @@
+{
+  "id": "xatodo",
+  "version": "0.1.0",
+  "min_shell_version": "0.2.2",
+  "namespace": "xatodo",
+  "display_name": "xatodo",
+  "ui": {
+    "ui_type": "surface",
+    "entry": "surface.json"
+  },
+  "menu": {
+    "title": "xatodo",
+    "icon_path": null
+  },
+  "routes": [],
+  "launch": {
+    "command": "./server/target/release/xatodo-server",
+    "args": []
+  },
+  "files": [],
+  "config": null
+}

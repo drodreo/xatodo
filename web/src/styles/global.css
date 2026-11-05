@@ -1,0 +1,211 @@
+/* XaTodo component styles (superlive shell module flavour, scoped version).
+   This file is carried by the component bundle via ?inline and injected into
+   the host document when App mounts, therefore:
+   - every rule is scoped under the .xatodo-app prefix, never polluting the
+     shell or other components;
+   - theme variables are declared on .xatodo-app (formerly :root), descendant
+     classes resolve them via inheritance;
+   - the old html/body document-level rules are gone (the shell owns the
+     document reset, components never touch host globals);
+   - generic control classes (.input/.btn/.card etc.) became .xatodo-app
+     descendant selectors, with zero changes to className references in TSX;
+   - @keyframes is a global namespace, so everything is prefixed with
+     xatodo- to avoid clashing with the host. */
+
+.xatodo-app {
+  color-scheme: light dark;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-hover: #eef0f3;
+  --text: #1f2328;
+  --text-muted: #6a737d;
+  --border: #e1e4e8;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+  /* Former document-level (html/body) appearance rules, collapsed into the
+  component root */
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+
+  /* Layout orchestration (header/main spacing is owned here); height fits
+  the shell container instead of occupying 100vh */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .xatodo-app {
+    --bg: #14171c;
+    --surface: #1d2127;
+    --surface-hover: #262b33;
+    --text: #e6e8eb;
+    --text-muted: #9aa3ad;
+    --border: #2f3540;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --danger: #ef4444;
+    --danger-soft: #3a1d1d;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.xatodo-app,
+.xatodo-app * {
+  box-sizing: border-box;
+}
+
+/* ===== Base controls (.input / .btn / .card, reused within the scope) ===== */
+.xatodo-app .input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  padding: 8px 12px;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+.xatodo-app .input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.xatodo-app .input::placeholder {
+  color: var(--text-muted);
+}
+
+.xatodo-app textarea.input {
+  resize: vertical;
+}
+
+.xatodo-app .btn {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 14px;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.xatodo-app .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.xatodo-app .btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.xatodo-app .btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.xatodo-app .btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.xatodo-app .btn-ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.xatodo-app .btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Card container: looks only, no outer margin/padding — spacing is owned by
+ the orchestrating parent */
+.xatodo-app .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.xatodo-app .form-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+/* ===== Shared animations (keyframes are a global namespace, prefixed to
+ avoid collisions) ===== */
+.xatodo-app .skeleton-card {
+  animation: xatodo-pulse 1.2s ease-in-out infinite;
+  background: var(--surface-hover);
+  border-radius: 12px;
+  height: 64px;
+}
+
+@keyframes xatodo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ===== App layout ===== */
+.xatodo-header {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.xatodo-brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.xatodo-main {
+  flex: 1;
+}
+
+/* ===== Shell-missing notice page (the root reuses .xatodo-app for variables
+ and base styles) ===== */
+.xatodo-app.xatodo-missing-shell {
+  align-items: center;
+  justify-content: center;
+}
+
+.xatodo-missing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  max-width: 420px;
+  padding: 32px;
+  text-align: center;
+}
+
+.xatodo-missing-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.xatodo-missing-text {
+  color: var(--text-muted);
+  margin: 0;
+}

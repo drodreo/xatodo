@@ -1,0 +1,28 @@
+# xatodo-server config template
+# Real config: cp config.example.toml config.toml and edit (config.toml is
+# excluded by .gitignore and never enters the repository)
+# The config path defaults to config.toml in the working directory; use the
+# XATODO_CONFIG env var to point elsewhere
+
+[server]
+listen = "0.0.0.0:8600"
+# sqlite (default; data/ is relative to the process working directory,
+# mode=rwc means the file is created automatically when absent)
+database_url = "sqlite://data/xatodo.db?mode=rwc"
+# postgres example:
+# database_url = "postgres://user:pass@host:5432/xatodo"
+
+# users: the apikey authority
+# Synced into the users table at startup (new names are inserted; existing
+# names have apikey/role updated by name)
+[users]
+
+[[users.entries]]
+name = "owner"
+apikey = "changeme-owner"
+role = "user"
+
+[[users.entries]]
+name = "assistant"
+apikey = "changeme-assistant"
+role = "assistant"

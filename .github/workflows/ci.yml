@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - name: cargo fmt --check
+        run: cargo fmt --check --manifest-path server/Cargo.toml
+      - name: cargo clippy
+        run: cargo clippy --manifest-path server/Cargo.toml --workspace --all-targets -- -D warnings
+      - name: cargo test
+        run: cargo test --manifest-path server/Cargo.toml
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install frontend deps
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+      - name: typecheck
+        working-directory: web
+        run: pnpm exec tsc --noEmit
+      - name: build
+        working-directory: web
+        run: pnpm build

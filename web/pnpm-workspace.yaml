@@ -1,0 +1,16 @@
+# pnpm's release-age gate (minimumReleaseAge, blocking versions published
+# less than a day ago) would hold back a freshly published slsdk-ts — this
+# repo is the sdk's first consumer and the publisher's own project, so its
+# own packages are exempt from the gate (the official pnpm convention:
+# trusting your own publishes).
+minimumReleaseAgeExclude:
+  - slsdk-ts
+# Neither dependency's build output is consumed by this repo: slsdk-ts is
+# resolved directly as source by tsconfig/vite aliasing (the bundle
+# externalizes it, runtime resolves the bare import via the shell import
+# map); esbuild's platform binary falls back to optionalDependencies.
+# pnpm 12's strictDepBuilds exits with an error on unreviewed build scripts
+# by default, so "no build needed" is declared explicitly here.
+allowBuilds:
+  slsdk-ts: false
+  esbuild: false

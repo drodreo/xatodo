@@ -1,0 +1,208 @@
+/* Todo page styles (superlive shell module flavour, scoped version).
+   Every selector is scoped as a .xatodo-app descendant (same discipline as
+   global.css), TSX classNames untouched;
+   this file is carried by the component bundle via ?inline and injected into
+   the host document when App mounts (TodoPage no longer imports it
+   directly).
+   Components (.composer/.filter-tabs/.todo-item etc.) only contain internal
+   layout;
+   sibling spacing is orchestrated by .todo-page's gap — the component has no
+   outer margin (P1_UI_NO_MARGIN_001) */
+
+.xatodo-app .todo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 640px;
+  padding: 20px 16px 48px;
+  width: 100%;
+}
+
+/* ---- Add form ---- */
+.xatodo-app .composer {
+  padding: 12px;
+}
+
+.xatodo-app .composer-row {
+  display: flex;
+  gap: 8px;
+}
+
+.xatodo-app .composer-title {
+  flex: 1;
+}
+
+.xatodo-app .composer-toggle {
+  flex-shrink: 0;
+}
+
+.xatodo-app .composer-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.xatodo-app .composer-notes {
+  width: 100%;
+}
+
+.xatodo-app .composer-due {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.xatodo-app .composer-due-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+/* ---- Filter tabs ---- */
+.xatodo-app .filter-tabs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.xatodo-app .filter-tab {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex: 1;
+  font: inherit;
+  padding: 6px 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.xatodo-app .filter-tab:hover {
+  color: var(--text);
+}
+
+.xatodo-app .filter-tab.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ---- Error bar ---- */
+.xatodo-app .todo-error {
+  align-items: center;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  color: var(--danger);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.xatodo-app .todo-error-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.xatodo-app .todo-error .btn-ghost {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ---- Loading skeleton ---- */
+.xatodo-app .todo-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---- Empty state ---- */
+.xatodo-app .todo-empty {
+  color: var(--text-muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.xatodo-app .todo-empty-title {
+  font-size: 16px;
+  margin: 0;
+}
+
+.xatodo-app .todo-empty-sub {
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+/* ---- List ---- */
+.xatodo-app .todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Single todo item (internal layout; item spacing orchestrated by the
+   .todo-list gap) ---- */
+.xatodo-app .todo-item {
+  padding: 12px 14px;
+}
+
+.xatodo-app .todo-item.is-completed .todo-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.xatodo-app .todo-item--editing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xatodo-app .todo-item-main {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.xatodo-app .todo-check {
+  accent-color: var(--primary);
+  flex-shrink: 0;
+  height: 17px;
+  width: 17px;
+}
+
+.xatodo-app .todo-title {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.xatodo-app .todo-notes {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 6px 0 0 27px;
+  overflow-wrap: anywhere;
+}
+
+.xatodo-app .todo-due {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 4px 0 0 27px;
+}
+
+.xatodo-app .todo-due.is-overdue {
+  color: var(--danger);
+}
+
+.xatodo-app .todo-item-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}

@@ -1,0 +1,49 @@
+# xatodo service deployment compose
+# Before first deployment: cp server/config.example.toml server/config.toml
+# and edit the apikey
+services:
+  xatodo-server:
+    build: ./server
+    container_name: xatodo-server
+    restart: unless-stopped
+    environment:
+      - XATODO_CONFIG=/app/config.toml
+    volumes:
+      # sqlite database file directory (data/ in database_url is relative to
+      # the process working directory /app)
+      - ./data:/app/data
+      # Real config mounted read-only
+      - ./server/config.toml:/app/config.toml:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.xatodo.rule=PathPrefix(`/backends/xatodo`)
+      - traefik.http.routers.xatodo.entrypoints=http
+      - traefik.http.routers.xatodo.middlewares=xatodo-stripprefix
+      - traefik.http.middlewares.xatodo-stripprefix.stripprefix.prefixes=/backends/xatodo
+      - traefik.http.services.xatodo.loadbalancer.server.port=8600
+    networks:
+      - traefik
+
+  # web client: always a separate container (never merged with the backend),
+  # per the traefik /apps convention
+  xatodo-web:
+    build:
+      context: ./web
+      args:
+        # Built in path-prefix form (after traefik stripprefix, nginx sees /)
+        VITE_BASE: /apps/xatodo/
+    container_name: xatodo-web
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.xatodo-web.rule=PathPrefix(`/apps/xatodo`)
+      - traefik.http.routers.xatodo-web.entrypoints=http
+      - traefik.http.routers.xatodo-web.middlewares=xatodo-web-stripprefix
+      - traefik.http.middlewares.xatodo-web-stripprefix.stripprefix.prefixes=/apps/xatodo
+      - traefik.http.services.xatodo-web.loadbalancer.server.port=80
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

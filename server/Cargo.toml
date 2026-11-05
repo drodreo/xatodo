@@ -1,0 +1,49 @@
+[workspace]
+resolver = "2"
+members = ["entity", "migration", "server"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+# ---- internal crates ----
+xa-todo-entity = { path = "entity" }
+xa-todo-migration = { path = "migration" }
+
+# ---- B-plane contract SDK (used by the module-4 componentization) ----
+slsdk-rs = { git = "https://github.com/drodreo/superlive", rev = "321fca1a65999f326a13b232c309645f2410e614" }
+
+# ---- sea-orm ecosystem (1.x stable line) ----
+# Dual backends: sqlite + postgres, runtime via tokio-rustls
+sea-orm = { version = "1.1", features = [
+    "sqlx-sqlite",
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-uuid",
+    "with-chrono",
+] }
+sea-orm-migration = { version = "1.1", features = [
+    "sqlx-sqlite",
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+] }
+
+# ---- web stack ----
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+
+# ---- serialization / config ----
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# ---- general ----
+anyhow = "1"
+thiserror = "2"
+log = "0.4"
+env_logger = "0.11"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }

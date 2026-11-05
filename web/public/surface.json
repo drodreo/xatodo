@@ -1,0 +1,72 @@
+{
+  "dataSpec": {
+    "queries": [
+      {
+        "pointer": "/todos",
+        "request": { "method": "GET", "path": "api/v1/todos" }
+      }
+    ]
+  },
+  "messages": [
+    {
+      "version": "v0.9.1",
+      "createSurface": { "surfaceId": "xatodo", "catalogId": "superlive" }
+    },
+    {
+      "version": "v0.9.1",
+      "updateDataModel": {
+        "surfaceId": "xatodo",
+        "path": "/",
+        "value": { "todos": [] }
+      }
+    },
+    {
+      "version": "v0.9.1",
+      "updateComponents": {
+        "surfaceId": "xatodo",
+        "components": [
+          {
+            "id": "root",
+            "component": "DataTable",
+            "columns": [
+              { "key": "title", "label": "标题" },
+              { "key": "notes", "label": "备注" },
+              { "key": "due_at", "label": "截止时间" },
+              { "key": "completed", "label": "已完成" }
+            ],
+            "rows": { "path": "/todos" },
+            "emptyMessage": "暂无待办",
+            "rowActions": [
+              {
+                "label": "切换完成",
+                "action": {
+                  "functionCall": {
+                    "call": "httpPatch",
+                    "args": {
+                      "path": { "path": "self" },
+                      "body": {
+                        "completed": {
+                          "call": "not",
+                          "args": { "value": { "path": "completed" } }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "label": "删除",
+                "action": {
+                  "functionCall": {
+                    "call": "httpDelete",
+                    "args": { "path": { "path": "self" } }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

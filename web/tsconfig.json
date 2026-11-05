@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    // '@shell/sdk' / '@shell/sdk/ui' are import map keys (component source
+    // imports by these names), mapped to local file: dependencies (slsdk-ts)
+    // for type resolution; build-time resolution is handled by vite
+    // resolve.alias.
+    // Note three field-tested facts (settled in the xatodo module-4 work):
+    // (1) TS paths substitution resolves as a "path relative to baseUrl";
+    // bare package names never fall through to node_modules. (2) Pointing at
+    // a package directory does not consult its package.json exports either
+    // (the directory is only probed for index.ts/.d.ts) — so point directly
+    // at the source entry; types come from source, independent of the rslib
+    // dist layout. (3) paths without wildcards match exactly: '@shell/sdk/ui'
+    // does not hit the '@shell/sdk' entry and must be listed separately.
+    "baseUrl": ".",
+    "paths": {
+      "@shell/sdk": ["./node_modules/slsdk-ts/src/index.ts"],
+      "@shell/sdk/ui": ["./node_modules/slsdk-ts/src/ui/index.ts"]
+    },
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
