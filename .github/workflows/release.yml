@@ -62,10 +62,17 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Package standalone component
         run: scripts/package-standalone.sh
+      - name: Release notes path
+        id: notes
+        run: |
+          f="docs/release-notes/${GITHUB_REF_NAME#v}.md"
+          [ -f "$f" ] || : > "$f"   # missing notes ship empty rather than fail the release
+          echo "path=$f" >> "$GITHUB_OUTPUT"
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/xatodo-standalone-*.zip
+          body_path: ${{ steps.notes.outputs.path }}
 
   package-connect:
     runs-on: ubuntu-latest
