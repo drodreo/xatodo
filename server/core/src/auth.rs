@@ -1,4 +1,4 @@
-//! Bearer apikey auth middleware
+//! Bearer apikey auth middleware (the daemon form's auth)
 //!
 //! Auth flow: Authorization: Bearer <apikey> → look up the users table →
 //! on hit, the current user entity is injected into request extensions and
@@ -8,10 +8,10 @@
 //! REST (/api/v1) and MCP (/mcp) share this middleware (applied uniformly at
 //! the router layer), so the permission surface is identical.
 //!
-//! In component mode (SL_ENDPOINT injected, launched by the shell) this
-//! middleware is not mounted: token auth is handled by slsdk serve, and
-//! request attribution is provided by the owner-injection middleware in
-//! component.rs using the same extensions shape.
+//! Component forms (standalone / connect) do not mount this middleware:
+//! token auth is handled by slsdk serve, and request attribution is provided
+//! by the owner-injection middleware in the integration crate using the same
+//! extensions shape.
 
 use axum::extract::{Request, State};
 use axum::http::{header::AUTHORIZATION, HeaderValue, StatusCode};

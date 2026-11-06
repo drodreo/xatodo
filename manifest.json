@@ -14,7 +14,7 @@
   },
   "routes": [],
   "launch": {
-    "command": "./server/target/release/xatodo-server",
+    "command": "./server/target/release/xa-todo-standalone",
     "args": []
   },
   "files": [],

@@ -1,0 +1,31 @@
+[package]
+name = "xa-todo-daemon"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "xa-todo-daemon"
+path = "src/main.rs"
+
+[dependencies]
+xa-todo-core = { workspace = true }
+xa-todo-entity = { workspace = true }
+xa-todo-migration = { workspace = true }
+
+# web stack
+axum = { workspace = true }
+tokio = { workspace = true }
+
+# serialization / config
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# general: error handling / logging / types
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+sea-orm = { workspace = true }

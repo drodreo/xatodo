@@ -1,6 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["entity", "migration", "server"]
+members = [
+    "entity",
+    "migration",
+    "core",
+    "integration",
+    "daemon",
+    "standalone",
+    "connect",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,9 +18,15 @@ edition = "2021"
 # ---- internal crates ----
 xa-todo-entity = { path = "entity" }
 xa-todo-migration = { path = "migration" }
+xa-todo-core = { path = "core" }
+xa-todo-integration = { path = "integration" }
+
+# ---- HTTP client (connect form: daemon forwarder) ----
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
+futures-util = "0.3"
 
 # ---- B-plane contract SDK (used by the module-4 componentization) ----
-slsdk-rs = { git = "https://github.com/drodreo/superlive", rev = "321fca1a65999f326a13b232c309645f2410e614" }
+slsdk-rs = "0.3"
 
 # ---- sea-orm ecosystem (1.x stable line) ----
 # Dual backends: sqlite + postgres, runtime via tokio-rustls

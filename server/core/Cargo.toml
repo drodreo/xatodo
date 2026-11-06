@@ -1,25 +1,15 @@
 [package]
-name = "xa-todo-server"
+name = "xa-todo-core"
 version.workspace = true
 edition.workspace = true
 
-# Binary name: xatodo-server
-[[bin]]
-name = "xatodo-server"
-path = "src/main.rs"
-
 [dependencies]
-# Internal crates: entity + migration
 xa-todo-entity = { workspace = true }
 xa-todo-migration = { workspace = true }
-
-# B-plane contract SDK (module-4 componentization: serve skeleton + registry)
-slsdk-rs = { workspace = true }
 
 # web stack
 axum = { workspace = true }
 tokio = { workspace = true }
-tower = { workspace = true }
 
 # serialization / config
 serde = { workspace = true }
@@ -30,11 +20,6 @@ toml = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
-env_logger = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 sea-orm = { workspace = true }
-
-# Tests: tower oneshot (ServiceExt) for router-layer tests
-[dev-dependencies]
-tower = { workspace = true, features = ["util"] }

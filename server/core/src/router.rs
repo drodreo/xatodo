@@ -1,10 +1,10 @@
 //! Route assembly: /api/v1 REST + /mcp MCP
 //!
 //! Business routes are decoupled from auth: `business_routes` contains only
-//! business endpoints, and auth is applied by the caller per mode —
-//! standalone mode ([`build`]) applies Bearer apikey auth; component mode
-//! (component::build_component_router) applies default owner injection (the
-//! shell gateway has already validated the token).
+//! business endpoints, and auth is applied by the caller per form —
+//! daemon ([`build`]) applies Bearer apikey auth; component forms
+//! (integration::router::build_component_router) apply default owner
+//! injection (the shell gateway has already validated the token).
 
 use axum::middleware;
 use axum::routing::{get, post};
@@ -44,7 +44,7 @@ pub fn business_routes(state: AppState) -> Router {
         .with_state(state)
 }
 
-/// Builds the standalone-mode application router: business routes + Bearer
+/// Builds the daemon-form application router: business routes + Bearer
 /// apikey auth
 ///
 /// route_layer only takes effect on registered routes (unmatched paths

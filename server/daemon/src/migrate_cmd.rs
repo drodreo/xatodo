@@ -1,6 +1,6 @@
 //! migrate subcommand: cross-database data migration
 //!
-//! Usage: `xatodo-server migrate --from <sqlite-url> --to <pg-url>`
+//! Usage: `xa-todo-daemon migrate --from <sqlite-url> --to <pg-url>`
 //!
 //! Flow: connect to the source DB and read all users + todos → run the
 //! migration against the target DB to create tables → insert row by row →

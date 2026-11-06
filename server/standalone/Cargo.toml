@@ -1,0 +1,24 @@
+[package]
+name = "xa-todo-standalone"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "xa-todo-standalone"
+path = "src/main.rs"
+
+[dependencies]
+xa-todo-core = { workspace = true }
+xa-todo-integration = { workspace = true }
+xa-todo-migration = { workspace = true }
+
+# B-plane contract SDK: serve skeleton (SL_ENDPOINT binding, /health, /events,
+# token wall, SIGTERM)
+slsdk-rs = { workspace = true }
+
+# general: logging / types
+anyhow = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+sea-orm = { workspace = true }
+tokio = { workspace = true }

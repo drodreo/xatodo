@@ -1,0 +1,34 @@
+[package]
+name = "xa-todo-connect"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "xa-todo-connect"
+path = "src/main.rs"
+
+[dependencies]
+xa-todo-core = { workspace = true }
+xa-todo-integration = { workspace = true }
+
+# B-plane contract SDK: serve skeleton + event plane (A2uiNotifier)
+slsdk-rs = { workspace = true }
+
+# daemon forwarding (stream = NDJSON events bridge, json unused: bodies pass
+# through as raw bytes)
+reqwest = { workspace = true }
+futures-util = { workspace = true }
+
+# web stack
+axum = { workspace = true }
+tokio = { workspace = true }
+
+# serialization / config
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# general: error handling / logging
+anyhow = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }

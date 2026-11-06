@@ -76,7 +76,7 @@ pub async fn create_todo(
     }
     let todo = service::create_todo(
         &state.db,
-        &state.notifier,
+        &state.todos_push,
         user.id,
         req.title,
         req.notes,
@@ -123,7 +123,7 @@ pub async fn update_todo(
         completed: req.completed,
         due_at: req.due_at,
     };
-    let todo = service::update_todo(&state.db, &state.notifier, user.id, id, patch)
+    let todo = service::update_todo(&state.db, &state.todos_push, user.id, id, patch)
         .await?
         .ok_or(ApiError::NotFound)?;
     Ok(Json(TodoResource::from(todo)))
@@ -135,7 +135,7 @@ pub async fn delete_todo(
     Extension(user): Extension<entity::user::Model>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<StatusCode> {
-    if service::delete_todo(&state.db, &state.notifier, user.id, id).await? {
+    if service::delete_todo(&state.db, &state.todos_push, user.id, id).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(ApiError::NotFound)

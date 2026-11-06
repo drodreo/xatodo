@@ -7,7 +7,8 @@
 #                          files excludes itself)
 #   config.toml            component-form config (relative sqlite path; the
 #                          parent directory is created by the server at startup)
-#   bin/xatodo-server      server release binary (unix executable bit kept)
+#   bin/xa-todo-standalone  standalone-form server binary (unix executable
+#                           bit kept)
 #   ui/**                  full web build artifact (the shell maps it to the
 #                          /comps/{id}/ static space)
 #
@@ -32,7 +33,7 @@ WEB_DIR="$ROOT/web"
 COMPONENT_ID="xatodo"
 NAMESPACE="todo"
 DISPLAY_NAME="待办"
-BIN_NAME="xatodo-server"
+BIN_NAME="xa-todo-standalone"
 MIN_SHELL_VERSION="0.1.0"
 LAUNCH_COMMAND="./bin/${BIN_NAME}"
 
@@ -61,15 +62,15 @@ rm -rf "$WEB_DIR/dist"
 # failure, so it is intercepted at packaging time.
 # Difference from the sl-events version: the xatodo server side has no
 # standalone NAMESPACE constant (the self-reported namespace is bound to
-# COMPONENT_ID; see server/src/component.rs "COMPONENT_ID doubles as the
+# COMPONENT_ID; see integration/src/lib.rs "COMPONENT_ID doubles as the
 # registry dispatch key"; the misalignment between that self-reported value
 # and manifest.namespace was adjudicated to stand as recorded). The runtime
 # consumers of manifest.namespace are shell dispatch and the web prefix, so
 # the NAMESPACE same-source check targets the web apiClient's
 # NAMESPACE_PREFIX.
-SERVER_CID="$(grep -oP 'COMPONENT_ID: &str = "\K[^"]+' "$SERVER_DIR/server/src/component.rs" || true)"
+SERVER_CID="$(grep -oP 'COMPONENT_ID: &str = "\K[^"]+' "$SERVER_DIR/integration/src/lib.rs" || true)"
 if [ -z "$SERVER_CID" ]; then
-  die "failed to extract the COMPONENT_ID constant from server/src/component.rs"
+  die "failed to extract the COMPONENT_ID constant from integration/src/lib.rs"
 fi
 if [ "$SERVER_CID" != "$COMPONENT_ID" ]; then
   die "COMPONENT_ID drift: script=$COMPONENT_ID server constant=$SERVER_CID"
@@ -94,8 +95,8 @@ mkdir -p "$ROOT/dist"
 ZIP_PATH="$ROOT/dist/${COMPONENT_ID}-component-${VERSION}.zip"
 
 # ---- 2. server release build ----
-log "Building server: cargo build --release -p xa-todo-server"
-(cd "$SERVER_DIR" && cargo build --release -p xa-todo-server)
+log "Building server: cargo build --release -p xa-todo-standalone"
+(cd "$SERVER_DIR" && cargo build --release -p xa-todo-standalone)
 SERVER_BIN="$SERVER_DIR/target/release/${BIN_NAME}"
 [ -f "$SERVER_BIN" ] || die "release binary missing: $SERVER_BIN"
 
@@ -116,16 +117,15 @@ cp -a "$WEB_DIR/dist/." "$STAGING/ui/"
 cat > "$STAGING/config.toml" <<'EOF'
 # xatodo component-form config (bundled in the package; launched by the
 # superlive v2 shell)
-# In component mode the listen address and auth are taken over by the shell
+# In component form the listen address and auth are taken over by the shell
 # (SL_ENDPOINT / token env vars injected); the listen and users sections are
 # not consumed but stay as placeholders because deserialization requires the
 # fields.
+# database_url is a top-level key (it must precede any [table] header).
+database_url = "sqlite://data/xatodo.db?mode=rwc"
+
 [server]
 listen = "0.0.0.0:8600"
-# Relative to the process working directory (the shell uses the component
-# install directory as cwd); the data/ parent directory is created
-# automatically by the server at startup
-database_url = "sqlite://data/xatodo.db?mode=rwc"
 
 [users]
 entries = []

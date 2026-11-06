@@ -127,7 +127,7 @@ async fn todo_create(
 
     match service::create_todo(
         &state.db,
-        &state.notifier,
+        &state.todos_push,
         user.id,
         title.to_string(),
         notes,
@@ -207,7 +207,7 @@ async fn todo_update(
         ));
     }
 
-    match service::update_todo(&state.db, &state.notifier, user.id, id, patch).await {
+    match service::update_todo(&state.db, &state.todos_push, user.id, id, patch).await {
         Ok(Some(_)) => Ok(tool_text(format!("Todo updated: {id}"))),
         Ok(None) => Ok(tool_error(format!("Todo not found: {id}"))),
         Err(e) => Ok(tool_error(format!("Update failed: {e}"))),
@@ -223,7 +223,7 @@ async fn todo_delete(
     let Some(id) = parse_todo_id_arg(args) else {
         return Ok(tool_error("Missing required argument: todo_id (UUID)"));
     };
-    match service::delete_todo(&state.db, &state.notifier, user.id, id).await {
+    match service::delete_todo(&state.db, &state.todos_push, user.id, id).await {
         Ok(true) => Ok(tool_text(format!("Todo deleted: {id}"))),
         Ok(false) => Ok(tool_error(format!("Todo not found: {id}"))),
         Err(e) => Ok(tool_error(format!("Delete failed: {e}"))),

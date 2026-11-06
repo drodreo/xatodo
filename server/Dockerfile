@@ -1,4 +1,4 @@
-# xatodo-server multi-stage build
+# xa-todo-daemon multi-stage build (the docker-resident service form)
 # Build context = this directory (xatodo/server, the workspace root)
 #
 # Config mounting (pick one at container runtime):
@@ -7,13 +7,13 @@
 #      (matches the directory the config file is mounted into)
 # Data mount (sqlite): -v ./data:/app/data
 
-# ---- Build stage: compile the workspace (entity / migration / server) ----
+# ---- Build stage: compile the daemon bin (workspace deps core/entity/
+#      migration come along; zero superlive dependency) ----
 FROM rust:1-slim AS builder
 WORKDIR /build
 COPY . .
-# Build the server bin only (workspace deps entity / migration come along)
 # The sqlite / rustls dependency chain is pure Rust — no extra system libs
-RUN cargo build --release -p xa-todo-server
+RUN cargo build --release -p xa-todo-daemon
 
 # ---- Runtime stage ----
 FROM debian:bookworm-slim
@@ -24,7 +24,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /build/target/release/xatodo-server /app/xatodo-server
+COPY --from=builder /build/target/release/xa-todo-daemon /app/xa-todo-daemon
 
 EXPOSE 8600
-ENTRYPOINT ["/app/xatodo-server"]
+ENTRYPOINT ["/app/xa-todo-daemon"]

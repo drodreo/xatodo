@@ -1,0 +1,28 @@
+[package]
+name = "xa-todo-integration"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+xa-todo-core = { workspace = true }
+xa-todo-entity = { workspace = true }
+
+# B-plane contract SDK: component manifest + serve skeleton + event plane
+slsdk-rs = { workspace = true }
+
+# router assembly / middleware types
+axum = { workspace = true }
+
+# general: error handling / logging / types
+anyhow = { workspace = true }
+log = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+sea-orm = { workspace = true }
+
+# Tests: temp sqlite DB + tower oneshot (ServiceExt) for router-layer tests
+[dev-dependencies]
+xa-todo-migration = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+tower = { workspace = true, features = ["util"] }

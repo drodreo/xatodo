@@ -11,23 +11,51 @@ xatodo/
 ├── scripts/                # component build / packaging helpers
 ├── web/                    # React frontend (also mounts as the superlive surface)
 └── server/                 # workspace root
-    ├── Cargo.toml          # workspace definition (entity / migration / server)
-    ├── Dockerfile
+    ├── Cargo.toml          # workspace definition (7 members, see below)
+    ├── Dockerfile          # builds xa-todo-daemon (the docker-resident form)
     ├── config.example.toml # config template (real config.toml is gitignored)
     ├── entity/             # sea-orm entities (xa-todo-entity)
     ├── migration/          # database migrations (xa-todo-migration)
-    └── server/             # service implementation (xa-todo-server, bin: xatodo-server)
+    ├── core/               # business core (xa-todo-core): REST / MCP / service /
+    │                       # auth / users sync / config — zero host dependency
+    ├── integration/        # superlive integration (xa-todo-integration):
+    │                       # component id / owner attribution / manifest /
+    │                       # event-plane adapter
+    ├── daemon/             # xa-todo-daemon (bin): docker-resident service
+    ├── standalone/         # xa-todo-standalone (bin): superlive shell component
+    └── connect/            # xa-todo-connect (bin): daemon connector for the shell
 ```
+
+## The three server forms
+
+All three share the business core (`xa-todo-core`); a form is just a way of
+wiring the core:
+
+- **daemon** (`xa-todo-daemon`): the docker-resident service. Bearer apikey
+  auth ([users.entries] synced into the users table), axum on
+  `config.server.listen`. Zero superlive dependency. This is the form the
+  Dockerfile / compose deploy.
+- **standalone** (`xa-todo-standalone`): launched by the superlive shell.
+  Single local owner replaces apikey auth (the shell gateway + slsdk token
+  wall handle authentication), slsdk serves on `SL_ENDPOINT` (uds/tcp) with
+  `/health` + `/events`; data changes push to shell surfaces live.
+- **connect** (`xa-todo-connect`): a pure forwarder for the shell in front
+  of a running daemon — no local database. REST (/api/v1) and MCP (/mcp)
+  requests pass through to `[backend].endpoint` with the backend apikey;
+  the daemon's `/events` stream feeds the shell surfaces. Configured via
+  `[backend]` in config.toml.
 
 ## Run locally
 
 ```bash
 cd server
 cp config.example.toml config.toml   # edit the apikey
-cargo run -p xa-todo-server
+cargo run -p xa-todo-daemon
 ```
 
-The server listens on `0.0.0.0:8600` with a default database of `sqlite://data/xatodo.db?mode=rwc` (both editable in config.toml; the database URL also accepts postgres).
+The daemon listens on `0.0.0.0:8600` with a default database of
+`sqlite://data/xatodo.db?mode=rwc` (both editable in config.toml; the
+database URL also accepts postgres).
 
 The frontend lives in `web/` (React + Vite + pnpm): `pnpm install && pnpm build`, or `pnpm dev` for the dev server.
 
@@ -74,7 +102,7 @@ docker compose up -d --build
 ## Cross-database migration
 
 ```bash
-xatodo-server migrate --from sqlite://data/xatodo.db?mode=rwc --to postgres://user:pass@host/xatodo
+xa-todo-daemon migrate --from sqlite://data/xatodo.db?mode=rwc --to postgres://user:pass@host/xatodo
 ```
 
 Flow: read all users + todos from the source database → run migrations on the target to create tables → insert row by row (UUID/timestamps handled by sea-orm). Idempotent: records with existing ids are skipped, safe to re-run.

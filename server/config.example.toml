@@ -1,18 +1,33 @@
-# xatodo-server config template
+# xatodo config template
 # Real config: cp config.example.toml config.toml and edit (config.toml is
 # excluded by .gitignore and never enters the repository)
 # The config path defaults to config.toml in the working directory; use the
-# XATODO_CONFIG env var to point elsewhere
+# XATODO_CONFIG env var to point elsewhere.
+#
+# Forms (selected by which binary you run):
+#   xa-todo-daemon      docker-resident service: listen + database_url +
+#                       users.entries consumed
+#   xa-todo-standalone  superlive shell component: database_url consumed;
+#                       listen / users.entries parsed but unused
+#   xa-todo-connect     daemon connector for the shell: [backend] consumed;
+#                       listen / users.entries / database_url parsed but
+#                       unused
+#
+# NOTE: database_url is a top-level key — TOML requires it to appear before
+# any [table] header, otherwise it is parsed as [server].database_url.
 
-[server]
-listen = "0.0.0.0:8600"
+# Database connection string: sqlite:// or postgres://
+# (required by the daemon / standalone forms; connect needs no database)
 # sqlite (default; data/ is relative to the process working directory,
 # mode=rwc means the file is created automatically when absent)
 database_url = "sqlite://data/xatodo.db?mode=rwc"
 # postgres example:
 # database_url = "postgres://user:pass@host:5432/xatodo"
 
-# users: the apikey authority
+[server]
+listen = "0.0.0.0:8600"
+
+# users: the apikey authority (daemon form)
 # Synced into the users table at startup (new names are inserted; existing
 # names have apikey/role updated by name)
 [users]
@@ -26,3 +41,9 @@ role = "user"
 name = "assistant"
 apikey = "changeme-assistant"
 role = "assistant"
+
+# ---- connect form only: the daemon to front ----
+# Uncomment when running xa-todo-connect:
+# [backend]
+# endpoint = "http://localhost:8600"
+# apikey = "changeme-owner"
