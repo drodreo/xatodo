@@ -9,8 +9,7 @@ use xa_todo_migration::{Migrator, MigratorTrait};
 
 /// Sets up a temp sqlite file DB that is migration-ready.
 pub(crate) async fn test_db(tag: &str) -> (DatabaseConnection, PathBuf) {
-    let path =
-        std::env::temp_dir().join(format!("xatodo-component-test-{tag}-{}.db", Uuid::new_v4()));
+    let path = std::env::temp_dir().join(format!("xatodo-test-{tag}-{}.db", Uuid::new_v4()));
     let url = format!("sqlite://{}?mode=rwc", path.display());
     let db = sea_orm::Database::connect(&url)
         .await

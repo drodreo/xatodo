@@ -7,9 +7,12 @@ A multi-user todo service. Rust + axum + sea-orm, dual REST and MCP entries, Bea
 ```
 xatodo/
 ├── compose.yml             # deployment (traefik /backends/xatodo + /apps/xatodo)
+├── Dockerfile              # release image (daemon + web static hosting in one container; GHCR)
 ├── manifest.json           # superlive component declaration
 ├── scripts/                # component build / packaging helpers
-├── web/                    # React frontend (also mounts as the superlive surface)
+│   ├── package-standalone.sh  # builds dist/xatodo-standalone-<version>.zip
+│   └── package-connect.sh     # builds dist/xatodo-connect-<version>.zip
+├── ui/                     # component UI bundle source (React; mounts as the superlive surface)
 └── server/                 # workspace root
     ├── Cargo.toml          # workspace definition (7 members, see below)
     ├── Dockerfile          # builds xa-todo-daemon (the docker-resident form)
@@ -33,8 +36,10 @@ wiring the core:
 
 - **daemon** (`xa-todo-daemon`): the docker-resident service. Bearer apikey
   auth ([users.entries] synced into the users table), axum on
-  `config.server.listen`. Zero superlive dependency. This is the form the
-  Dockerfile / compose deploy.
+  `config.server.listen`. Optional SPA static hosting: set `[server].web_root`
+  and any GET that misses the API routes is answered from that directory
+  (missing files fall back to index.html). Zero superlive dependency. This is
+  the form the Dockerfiles / compose deploy.
 - **standalone** (`xa-todo-standalone`): launched by the superlive shell.
   Single local owner replaces apikey auth (the shell gateway + slsdk token
   wall handle authentication), slsdk serves on `SL_ENDPOINT` (uds/tcp) with
@@ -57,7 +62,7 @@ The daemon listens on `0.0.0.0:8600` with a default database of
 `sqlite://data/xatodo.db?mode=rwc` (both editable in config.toml; the
 database URL also accepts postgres).
 
-The frontend lives in `web/` (React + Vite + pnpm): `pnpm install && pnpm build`, or `pnpm dev` for the dev server.
+The frontend lives in `ui/` (React + Vite + pnpm): `pnpm install && pnpm build`, or `pnpm dev` for the dev server.
 
 ## Authentication
 
@@ -107,13 +112,35 @@ xa-todo-daemon migrate --from sqlite://data/xatodo.db?mode=rwc --to postgres://u
 
 Flow: read all users + todos from the source database → run migrations on the target to create tables → insert row by row (UUID/timestamps handled by sea-orm). Idempotent: records with existing ids are skipped, safe to re-run.
 
+## Release artifacts (tag-triggered)
+
+Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/release.yml), which publishes:
+
+- **Docker image**: `ghcr.io/drodreo/xatodo` (tagged with the version without the `v` prefix, plus `latest`) — daemon and ui bundle in one container. Out of the box:
+
+  ```bash
+  docker run -d -p 8600:8600 -v ./data:/app/data ghcr.io/drodreo/xatodo
+  ```
+
+  The baked default config serves sqlite at `/app/data/xatodo.db`, the API on `0.0.0.0:8600`, and the bundled ui bundle at `/` (`[server].web_root`). Mount a real config to declare apikey users — without `[users.entries]` every API call is 401:
+
+  ```bash
+  docker run -d -p 8600:8600 \
+    -v ./data:/app/data \
+    -v ./config.toml:/app/config.toml:ro \
+    ghcr.io/drodreo/xatodo
+  ```
+
+  Note on the bundled web bundle: it is the superlive component build (entry.js + surface assets, no index.html — the UI targets the shell environment). A browser hitting `/` gets a 404 until a standalone web form exists; the API (`/api/v1`, `/mcp`) is fully functional regardless.
+- **Component packages**: `xatodo-standalone-<version>.zip` and `xatodo-connect-<version>.zip` are attached to the GitHub Release. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package's `config.toml` ships `[backend]` placeholders (endpoint + apikey) to edit after import; its display name carries the form marker.
+
 ## superlive component integration
 
 This project is also a [superlive](https://github.com/drodreo/superlive) component:
 
 - `manifest.json` declares the component (id, namespace, entry points, menu entry)
-- `web/public/surface.json` provides the declarative surface UI; the same React tree mounts as a surface inside the superlive shell or standalone via nginx
-- `scripts/superlive.build` is the component build entry the shell invokes; `scripts/gen-manifest.py` and `scripts/package-component.sh` handle packaging
+- `ui/public/surface.json` provides the declarative surface UI; the same React tree mounts as a surface inside the superlive shell or standalone via nginx
+- `scripts/superlive.build` is the component build entry the shell invokes; `scripts/gen-manifest.py`, `scripts/package-standalone.sh` and `scripts/package-connect.sh` handle packaging
 - The backend talks to the shell over slsdk-rs (spawn env + `/health` + `/events` push channel), so todos update live inside the shell
 
 The `slsdk-rs` / `slsdk-ts` dependencies are pinned to a superlive commit, so a plain `cargo check` / `pnpm install` works without a local superlive checkout.

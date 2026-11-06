@@ -20,7 +20,7 @@ mod test_support;
 /// referenced by bins via `crate::COMPONENT_ID`) does not match that probe,
 /// so the check degrades to warn+skip. Identity is still enforced at
 /// runtime: the /health response self-reports this constant and the shell
-/// matches it against manifest.id, and package-component.sh runs the same
+/// matches it against manifest.id, and the packaging scripts run the same
 /// source-of-truth extraction at packaging time. Modules here reference it
 /// via `crate::COMPONENT_ID`; it also serves as the registry dispatch key
 /// (namespace).

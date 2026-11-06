@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the superlive v2 component manifest.json (component packaged by
-package-component.sh).
+package-standalone.sh / package-connect.sh).
 
 Collects sha256 fingerprints of all regular files from the staging directory,
 validates the ui entry (fixed name entry.js in the component build form), and
@@ -30,7 +30,7 @@ from pathlib import Path
 ID_NS_RE = re.compile(r"^[A-Za-z0-9-]+$")
 
 # Project root (derived from the script's own location): used to hint about
-# web/public when the surface entry is missing from the package
+# ui/public when the surface entry is missing from the package
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -47,14 +47,14 @@ def discover_entry(ui_dir: Path, ui_type: str, entry: str) -> str:
     returns its relative path.
 
     module type: the component build form's entry is the fixed name entry.js
-    (contract source: web/vite.config.js — rollupOptions.input is the sole
+    (contract source: ui/vite.config.js — rollupOptions.input is the sole
     src/entry.tsx, entryFileNames is fixed as 'entry.js' with no hash, and
     index.html is not part of the build artifact) — manifest.ui.entry
     statically declares this name.
 
     surface type: the entry is an A2UI descriptor (default surface.json). The
-    descriptor normally lives in web/public/ (copied into the build artifact
-    by vite build); the dev form registers web/dist as the static space,
+    descriptor normally lives in ui/public/ (copied into the build artifact
+    by vite build); the dev form registers ui/dist as the static space,
     while the packaged variant must place the descriptor into the staging
     ui/.
     """
@@ -62,10 +62,10 @@ def discover_entry(ui_dir: Path, ui_type: str, entry: str) -> str:
         return entry
     hint = ""
     if ui_type == "surface":
-        public_copy = PROJECT_ROOT / "web" / "public" / entry
+        public_copy = PROJECT_ROOT / "ui" / "public" / entry
         if public_copy.is_file():
             hint = (
-                f" (web/public/{entry} exists; in the dev form it registers as the build "
+                f" (ui/public/{entry} exists; in the dev form it registers as the build "
                 "artifact after vite build — for the packaged variant, put this file "
                 "into the staging ui/)"
             )

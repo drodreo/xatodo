@@ -1,0 +1,22 @@
+# VCS metadata
+.git/
+
+# Rust build artifacts (rebuilt inside the image)
+server/target/
+
+# Local runtime data (sqlite databases) — never enters the build context
+data/
+server/data/
+*.db
+
+# The real config carries apikeys — never enters the build context
+# (only server/config.example.toml is tracked; the baked image config is
+# generated inside the Dockerfile)
+server/config.toml
+
+# Frontend build outputs (rebuilt inside the image)
+ui/node_modules/
+ui/dist/
+
+# Packaged component zips (built by the packaging scripts)
+dist/
