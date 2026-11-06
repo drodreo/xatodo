@@ -3396,7 +3396,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xa-todo-connect"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3415,7 +3415,7 @@ dependencies = [
 
 [[package]]
 name = "xa-todo-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3434,7 +3434,7 @@ dependencies = [
 
 [[package]]
 name = "xa-todo-daemon"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3457,7 +3457,7 @@ dependencies = [
 
 [[package]]
 name = "xa-todo-entity"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sea-orm",
  "serde",
@@ -3465,7 +3465,7 @@ dependencies = [
 
 [[package]]
 name = "xa-todo-integration"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3484,14 +3484,14 @@ dependencies = [
 
 [[package]]
 name = "xa-todo-migration"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "sea-orm-migration",
 ]
 
 [[package]]
 name = "xa-todo-standalone"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "env_logger",
