@@ -132,7 +132,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/releas
   ```
 
   Note on the bundled web bundle: it is the superlive component build (entry.js + surface assets, no index.html — the UI targets the shell environment). A browser hitting `/` gets a 404 until a standalone web form exists; the API (`/api/v1`, `/mcp`) is fully functional regardless.
-- **Component packages**: `xatodo-standalone-<version>.zip` and `xatodo-connect-<version>.zip` are attached to the GitHub Release. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package's `config.toml` ships `[backend]` placeholders (endpoint + apikey) to edit after import; its display name carries the form marker.
+- **Component packages**: `xatodo-standalone-<version>.zip` and `xatodo-connect-<version>.zip` are attached to the GitHub Release. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package declares `backend.endpoint` / `backend.apikey` as required config fields — the shell gates the first start on them and renders the daemon settings right on the component config page; its display name carries the form marker.
 
 ## superlive component integration
 

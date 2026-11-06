@@ -128,6 +128,13 @@ def main() -> None:
         default=None,
         help="ui entry relative path; defaults: module=entry.js, surface=surface.json",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="optional path to a JSON document with the full config declaration "
+        "(fields + i18n) woven into manifest.config verbatim; omit for "
+        "zero-config components",
+    )
     args = parser.parse_args()
 
     # Pre-flight checks (aligned with slsdk manifest.rs validate; errors fire
@@ -164,6 +171,25 @@ def main() -> None:
     if not files:
         sys.exit("error: the files list is empty (staging contains no files)")
 
+    config_decl = None
+    if args.config:
+        config_path = Path(args.config).resolve()
+        if not config_path.is_file():
+            sys.exit(f"error: config declaration file does not exist: {config_path}")
+        try:
+            config_decl = json.loads(config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            sys.exit(f"error: config declaration is not valid JSON ({config_path}): {e}")
+        # The i18n label files must ship inside the package next to the
+        # declaration that references them.
+        for locale, rel in (config_decl.get("i18n") or {}).items():
+            if not (staging / rel).is_file():
+                sys.exit(
+                    f"error: config i18n file for {locale} is not in staging: {rel} "
+                    f"(referenced by {config_path.name}; write it into the package "
+                    "before generating the manifest)"
+                )
+
     manifest = {
         "id": args.id,
         "version": args.version,
@@ -174,6 +200,7 @@ def main() -> None:
         "menu": {"title": args.display_name, "icon_path": None},
         "routes": [{"path": "/", "title": args.display_name}],
         "launch": {"command": args.launch_command, "args": []},
+        "config": config_decl,
         "files": files,
     }
 
