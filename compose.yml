@@ -28,7 +28,7 @@ services:
   # per the traefik /apps convention
   xatodo-web:
     build:
-      context: ./web
+      context: ./ui
       args:
         # Built in path-prefix form (after traefik stripprefix, nginx sees /)
         VITE_BASE: /apps/xatodo/

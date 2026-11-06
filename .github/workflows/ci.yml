@@ -25,7 +25,7 @@ jobs:
       - name: cargo test
         run: cargo test --manifest-path server/Cargo.toml --workspace
 
-  web:
+  ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -36,13 +36,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: ui/pnpm-lock.yaml
       - name: Install frontend deps
-        working-directory: web
+        working-directory: ui
         run: pnpm install --frozen-lockfile
       - name: typecheck
-        working-directory: web
+        working-directory: ui
         run: pnpm exec tsc --noEmit
       - name: build
-        working-directory: web
+        working-directory: ui
         run: pnpm build
