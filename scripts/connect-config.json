@@ -1,0 +1,32 @@
+{
+  "fields": [
+    {
+      "key": "backend.endpoint",
+      "label": "config.backend.endpoint.label",
+      "type": "string",
+      "default": null,
+      "required": true,
+      "options": null,
+      "format": null,
+      "restart_required": true,
+      "sensitive": false,
+      "group": "backend"
+    },
+    {
+      "key": "backend.apikey",
+      "label": "config.backend.apikey.label",
+      "type": "string",
+      "default": null,
+      "required": true,
+      "options": null,
+      "format": null,
+      "restart_required": true,
+      "sensitive": true,
+      "group": "backend"
+    }
+  ],
+  "i18n": {
+    "en": "config/en.json",
+    "zh": "config/zh.json"
+  }
+}
