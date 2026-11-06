@@ -40,6 +40,12 @@ pub struct ServerCfg {
     /// Listen address, e.g. "0.0.0.0:8600" (daemon only; other forms parse
     /// but do not consume it)
     pub listen: String,
+    /// Optional static web root (daemon only): when set, the daemon serves
+    /// the directory as a SPA frontend — any GET that misses the API routes
+    /// falls back to a file in the directory, and a missing file falls back
+    /// to index.html. Absent = no static hosting (API-only behavior,
+    /// unchanged). standalone / connect parse but do not consume it.
+    pub web_root: Option<String>,
 }
 
 /// [backend] section: where the connect form forwards to

@@ -26,6 +26,11 @@ database_url = "sqlite://data/xatodo.db?mode=rwc"
 
 [server]
 listen = "0.0.0.0:8600"
+# Optional static web root (daemon only): serve the directory as a SPA
+# frontend on the same listener — API routes win, unmatched GETs fall back
+# to files in the directory (missing files fall back to index.html).
+# Uncomment to enable:
+# web_root = "/app/web"
 
 # users: the apikey authority (daemon form)
 # Synced into the users table at startup (new names are inserted; existing

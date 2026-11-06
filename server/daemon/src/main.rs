@@ -1,5 +1,6 @@
 //! xa-todo-daemon: the docker-resident service form (REST /api/v1 + MCP
-//! /mcp behind Bearer apikey auth).
+//! /mcp behind Bearer apikey auth, optional SPA static hosting via
+//! [server].web_root).
 //!
 //! Startup flow: load config → require database_url → connect → migrate →
 //! users_sync (config [users.entries] is the apikey authority) → axum serve
@@ -18,6 +19,7 @@
 //! info, overridable via RUST_LOG.
 
 mod migrate_cmd;
+mod web;
 
 use log::info;
 use sea_orm::Database;
@@ -88,8 +90,14 @@ async fn serve() -> anyhow::Result<()> {
     info!("Config loaded (listen = {})", cfg.server.listen);
     users_sync::sync_users(&db, &cfg.users.entries).await?;
 
-    // 6. Start axum (REST + MCP, unified Bearer auth); pushes drop silently
-    let app = router::build(AppState::new(db));
+    // 6. Start axum (REST + MCP, unified Bearer auth); pushes drop silently.
+    //    Optional SPA static hosting ([server].web_root) rides on the same
+    //    listener as a fallback service (daemon-only; absent field = unchanged
+    //    API-only behavior).
+    let app = web::attach(
+        router::build(AppState::new(db)),
+        cfg.server.web_root.as_deref(),
+    );
     let listener = tokio::net::TcpListener::bind(&cfg.server.listen).await?;
     info!("HTTP service started: http://{}", cfg.server.listen);
     axum::serve(listener, app).await?;
