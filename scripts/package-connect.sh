@@ -55,6 +55,7 @@ UI_DIR="$ROOT/ui"
 COMPONENT_ID="xatodo"
 NAMESPACE="todo"
 DISPLAY_NAME="待办（转发）"
+DISPLAY_NAME_EN="Todos (connector)"
 BIN_NAME="xa-todo-connect"
 MIN_SHELL_VERSION="0.1.0"
 # Update declaration: the shell shows the update-check button for components
@@ -200,6 +201,7 @@ log "Generating manifest.json"
   --id "$COMPONENT_ID" \
   --namespace "$NAMESPACE" \
   --display-name "$DISPLAY_NAME" \
+  --display-name-en "$DISPLAY_NAME_EN" \
   --version "$VERSION" \
   --min-shell-version "$MIN_SHELL_VERSION" \
   --launch-command "$LAUNCH_COMMAND" \
