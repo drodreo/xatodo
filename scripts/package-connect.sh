@@ -96,14 +96,14 @@ rm -rf "$UI_DIR/dist"
 # self-report (connect's /health reports the shared COMPONENT_ID constant)
 # and the namespace must match the ui apiClient's NAMESPACE_PREFIX (the
 # shell strips /api/{ns}/ before dispatching to the component).
-SERVER_CID="$(grep -oP 'COMPONENT_ID: &str = "\K[^"]+' "$SERVER_DIR/integration/src/lib.rs" || true)"
+SERVER_CID="$(sed -n 's|.*COMPONENT_ID: &str = "\([^"]*\)".*|\1|p' "$SERVER_DIR/integration/src/lib.rs" || true)"
 if [ -z "$SERVER_CID" ]; then
   die "failed to extract the COMPONENT_ID constant from integration/src/lib.rs"
 fi
 if [ "$SERVER_CID" != "$COMPONENT_ID" ]; then
   die "COMPONENT_ID drift: script=$COMPONENT_ID server constant=$SERVER_CID"
 fi
-UI_NS_PREFIX="$(grep -oP "NAMESPACE_PREFIX = '/api/\\K[^']+" "$UI_DIR/src/services/apiClient.ts" || true)"
+UI_NS_PREFIX="$(sed -n "s|.*NAMESPACE_PREFIX = '/api/\([^']*\)'.*|\1|p" "$UI_DIR/src/services/apiClient.ts" || true)"
 if [ -z "$UI_NS_PREFIX" ]; then
   die "failed to extract NAMESPACE_PREFIX from ui/src/services/apiClient.ts"
 fi

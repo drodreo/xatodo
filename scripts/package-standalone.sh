@@ -95,14 +95,14 @@ rm -rf "$UI_DIR/dist"
 # NAMESPACE_PREFIX: the runtime consumers of manifest.namespace are shell
 # dispatch and the web prefix (/api/{ns}/...), so a drift breaks every API
 # call inside the shell.
-SERVER_CID="$(grep -oP 'COMPONENT_ID: &str = "\K[^"]+' "$SERVER_DIR/integration/src/lib.rs" || true)"
+SERVER_CID="$(sed -n 's|.*COMPONENT_ID: &str = "\([^"]*\)".*|\1|p' "$SERVER_DIR/integration/src/lib.rs" || true)"
 if [ -z "$SERVER_CID" ]; then
   die "failed to extract the COMPONENT_ID constant from integration/src/lib.rs"
 fi
 if [ "$SERVER_CID" != "$COMPONENT_ID" ]; then
   die "COMPONENT_ID drift: script=$COMPONENT_ID server constant=$SERVER_CID"
 fi
-UI_NS_PREFIX="$(grep -oP "NAMESPACE_PREFIX = '/api/\\K[^']+" "$UI_DIR/src/services/apiClient.ts" || true)"
+UI_NS_PREFIX="$(sed -n "s|.*NAMESPACE_PREFIX = '/api/\([^']*\)'.*|\1|p" "$UI_DIR/src/services/apiClient.ts" || true)"
 if [ -z "$UI_NS_PREFIX" ]; then
   die "failed to extract NAMESPACE_PREFIX from ui/src/services/apiClient.ts"
 fi
