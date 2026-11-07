@@ -56,6 +56,13 @@ pub struct BackendCfg {
     pub endpoint: String,
     /// Bearer apikey presented to the daemon on every forwarded request
     pub apikey: String,
+    /// Whether outbound requests may follow ambient proxy settings
+    /// (http_proxy/https_proxy env). Default false — direct reach: the
+    /// backend is a user-configured service address, and an ambient proxy
+    /// that cannot reach it turns every forward into "backend unreachable".
+    /// Set true only when the network path to the daemon requires a proxy.
+    #[serde(default)]
+    pub use_system_proxy: bool,
 }
 
 /// [users] section

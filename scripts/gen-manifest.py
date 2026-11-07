@@ -114,6 +114,13 @@ def main() -> None:
     parser.add_argument("--id", required=True)
     parser.add_argument("--namespace", required=True)
     parser.add_argument("--display-name", required=True)
+    parser.add_argument(
+        "--display-name-en",
+        default=None,
+        help="optional English display title; given, the menu and route "
+        "declarations carry localized titles ({zh, en}) so the shell "
+        "resolves the component name per its UI language",
+    )
     parser.add_argument("--version", required=True)
     parser.add_argument("--min-shell-version", required=True)
     parser.add_argument("--launch-command", required=True)
@@ -134,6 +141,14 @@ def main() -> None:
         help="optional path to a JSON document with the full config declaration "
         "(fields + i18n) woven into manifest.config verbatim; omit for "
         "zero-config components",
+    )
+    parser.add_argument(
+        "--update-url",
+        default=None,
+        help="optional version-manifest URL woven into manifest.update "
+        "({manifest_url}); components declaring it get the shell's update "
+        "check button, and the URL must serve the version manifest JSON "
+        "({version, notes, packages{platform: zip-url}})",
     )
     args = parser.parse_args()
 
@@ -197,10 +212,21 @@ def main() -> None:
         "namespace": args.namespace,
         "display_name": args.display_name,
         "ui": {"ui_type": args.ui_type, "entry": entry},
-        "menu": {"title": args.display_name, "icon_path": None},
-        "routes": [{"path": "/", "title": args.display_name}],
+        "menu": {
+            "title": args.display_name,
+            "icon_path": None,
+            **({"titles": {"zh": args.display_name, "en": args.display_name_en}} if args.display_name_en else {}),
+        },
+        "routes": [
+            {
+                "path": "/",
+                "title": args.display_name,
+                **({"titles": {"zh": args.display_name, "en": args.display_name_en}} if args.display_name_en else {}),
+            }
+        ],
         "launch": {"command": args.launch_command, "args": []},
         "config": config_decl,
+        "update": {"manifest_url": args.update_url} if args.update_url else None,
         "files": files,
     }
 
