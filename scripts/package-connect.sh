@@ -25,8 +25,8 @@
 # exclusive forms of one logical component: the shell's namespace rule
 # rejects installing connect alongside the standalone package ("namespace
 # already taken"), and same-id install takes the replace path (config.toml
-# is preserved). The display_name carries the form marker so the shell menu
-# shows which form is installed.
+# is preserved). The display name is identical to the standalone form —
+# they are one component, two mutually exclusive install forms.
 #
 # Contract references:
 #   superlive/slsdk-rs/src/manifest.rs          manifest JSON shape and validate rules
@@ -54,8 +54,8 @@ UI_DIR="$ROOT/ui"
 
 COMPONENT_ID="xatodo"
 NAMESPACE="todo"
-DISPLAY_NAME="待办（转发）"
-DISPLAY_NAME_EN="Todos (connector)"
+DISPLAY_NAME="待办"
+DISPLAY_NAME_EN="Todos"
 BIN_NAME="xa-todo-connect"
 MIN_SHELL_VERSION="0.1.0"
 # Update declaration: the shell shows the update-check button for components
