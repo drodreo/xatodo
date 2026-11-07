@@ -153,15 +153,17 @@ cat > "$STAGING/config.toml" <<'EOF'
 [server]
 listen = "0.0.0.0:8600"
 
-# The daemon to front — replace both placeholder values after import:
-# endpoint = the base URL of a running xatodo daemon (no trailing slash)
-# apikey   = one of that daemon's [users.entries] apikeys
+# The daemon to front — the connector's required fields ship empty on
+# purpose: an empty value counts as "missing" by the shell's config-gate
+# convention, which routes a freshly installed connector to the config
+# page before its first start (fill in endpoint + one of the daemon's
+# [users.entries] apikeys there).
 # use_system_proxy (optional, default false): false reaches the daemon
 #   directly, ignoring ambient proxy settings (http_proxy env); set true
 #   only when the network path to the daemon requires a proxy.
 [backend]
-endpoint = "http://localhost:8600"
-apikey = "paste-your-daemon-apikey-here"
+endpoint = ""
+apikey = ""
 use_system_proxy = false
 
 [users]
