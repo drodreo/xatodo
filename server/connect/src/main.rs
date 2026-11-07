@@ -73,10 +73,22 @@ struct ForwardCtx {
     backend: Arc<BackendCfg>,
 }
 
+/// The connector's outbound client. Proxy-less by design: the backend
+/// endpoint is a user-configured service address the connector must reach
+/// directly — reqwest otherwise inherits ambient proxy settings
+/// (http_proxy/https_proxy env), which silently reroutes intranet
+/// forwarding through a proxy that cannot reach the target.
+fn direct_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("client build cannot fail with only no_proxy set")
+}
+
 /// The forward router: everything under /api/v1 plus /mcp, all methods.
 fn forward_router(backend: BackendCfg) -> Router {
     let ctx = ForwardCtx {
-        client: reqwest::Client::new(),
+        client: direct_client(),
         backend: Arc::new(backend),
     };
     Router::new()
@@ -124,10 +136,19 @@ async fn forward(
     match req.send().await {
         Ok(resp) => translate_response(resp).await,
         Err(e) => {
-            warn!("Forward {} {} failed: {e}", method, uri.path());
+            // Full source chain: the top-level reqwest display alone ("error
+            // sending request for url") hides whether the death was a refused
+            // connection, a timeout, or a proxy failure — the chain names it.
+            let mut chain = e.to_string();
+            let mut src = std::error::Error::source(&e);
+            while let Some(s) = src {
+                chain.push_str(&format!(": {s}"));
+                src = s.source();
+            }
+            warn!("Forward {} {} failed: {chain}", method, uri.path());
             (
                 StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("backend unreachable: {e}") })),
+                Json(json!({ "error": format!("backend unreachable: {chain}") })),
             )
                 .into_response()
         }
@@ -171,7 +192,7 @@ async fn translate_response(resp: reqwest::Response) -> Response {
 /// [`ServerToClientMessage`]. On stream loss it reconnects with exponential
 /// backoff (2s doubling, capped at 30s; reset on a clean stream end).
 async fn events_bridge(backend: BackendCfg, notifier: A2uiNotifier) {
-    let client = reqwest::Client::new();
+    let client = direct_client();
     let mut backoff = Duration::from_secs(2);
     loop {
         let url = format!("{}/events", backend.endpoint.trim_end_matches('/'));
