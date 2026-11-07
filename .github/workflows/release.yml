@@ -1,8 +1,10 @@
 name: Release
 
 # Tag-triggered release: a `v*` tag publishes the all-in-one GHCR image
-# (daemon + web static hosting) and attaches the two superlive component
-# packages (standalone / connect) to the GitHub Release.
+# (daemon + web static hosting) and attaches the superlive component packages
+# (standalone / connect) to the GitHub Release — both forms are built on all
+# three shell platforms (linux-x86_64 / macos-aarch64 / windows-x86_64), six
+# zips per release, asset names carrying the platform suffix.
 
 on:
   push:
@@ -42,8 +44,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  package-standalone:
-    runs-on: ubuntu-latest
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-latest = arm64 runner, windows-latest = x64 runner — the
+        # matrix matches the superlive shell's updater platform keys.
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # The packaging scripts are bash; GitHub windows runners ship Git
+        # Bash, so the same scripts run on all three platforms unchanged.
+        shell: bash
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -58,7 +71,12 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: ui/pnpm-lock.yaml
-      # The packaging script runs the ui build through `npm run build`
+      # The scripts shell out to zip/unzip for packaging and the in-package
+      # proofs; Git Bash on windows runners ships neither — install both.
+      - name: Ensure zip tools (windows)
+        if: runner.os == 'Windows'
+        run: choco install zip unzip --no-progress -y
+      # The packaging scripts run the ui build through `npm run build`
       # without installing dependencies; node_modules must be in place first
       # (frozen install, reproducible against the committed lockfile)
       - name: Install frontend deps
@@ -66,6 +84,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Package standalone component
         run: scripts/package-standalone.sh
+      - name: Package connect component
+        run: scripts/package-connect.sh
       - name: Release notes path
         id: notes
         run: |
@@ -75,31 +95,7 @@ jobs:
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/xatodo-standalone-*.zip
+          files: |
+            dist/xatodo-standalone-*.zip
+            dist/xatodo-connect-*.zip
           body_path: ${{ steps.notes.outputs.path }}
-
-  package-connect:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: server
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 12
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-      - name: Install frontend deps
-        working-directory: ui
-        run: pnpm install --frozen-lockfile
-      - name: Package connect component
-        run: scripts/package-connect.sh
-      - name: Attach to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/xatodo-connect-*.zip

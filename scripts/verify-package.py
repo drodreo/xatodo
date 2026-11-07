@@ -17,8 +17,11 @@ Checks (one-to-one with the shell-side failure forms):
 5. No symlink entries (the shell-side collect_relative_files rejects
    symlinks)
 6. The launch binary is declared in files and carries the unix executable
-   bit inside the zip (the installer restores unix_mode on extraction; a
-   binary without the exec bit cannot start)
+   bit inside the zip — the check applies to unix-created archives
+   (create_system == 3, the shell restores unix_mode on extraction);
+   archives created on Windows carry no unix permission bits at all, so the
+   exec-bit criterion does not apply there (the shell's perm restore is a
+   unix-side concern)
 7. ui.entry exists under ui/ in the package (shell-side /comps/{id}/{entry}
    static mapping reachable)
 8. Prints the content inventory and the manifest summary
@@ -153,8 +156,13 @@ def main() -> None:
         fail(f"launch binary not declared in files: {bin_rel}")
     if bin_rel not in actual_set:
         fail(f"launch binary not in the package: {bin_rel}")
-    bin_mode = unix_mode(zf.getinfo(bin_rel)) & 0o777
-    if not bin_mode & 0o111:
+    bin_info = zf.getinfo(bin_rel)
+    bin_mode = unix_mode(bin_info) & 0o777
+    # Unix-created archives carry the exec bit the shell restores on
+    # extraction; archives created on Windows have no unix permission bits
+    # (create_system != 3), and the shell's perm restore never runs there —
+    # the criterion only applies to unix-created packages.
+    if bin_info.create_system == 3 and not bin_mode & 0o111:
         fail(f"launch binary lacks the executable bit (cannot start after extraction): {bin_rel} mode={oct(bin_mode)}")
     ok(f"launch: {command} (unix mode {oct(bin_mode)}, args={launch.get('args', [])})")
 
