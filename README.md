@@ -6,7 +6,7 @@ A multi-user todo service. Rust + axum + sea-orm, dual REST and MCP entries, Bea
 
 ```
 xatodo/
-├── compose.yml             # deployment (traefik /backends/xatodo + /apps/xatodo)
+├── compose.yml             # deployment (traefik /backends/xatodo)
 ├── Dockerfile              # release image (daemon + web static hosting in one container; GHCR)
 ├── manifest.json           # superlive component declaration
 ├── scripts/                # component build / packaging helpers
@@ -100,7 +100,7 @@ cp server/config.example.toml server/config.toml   # edit the apikey
 docker compose up -d --build
 ```
 
-- Routing: traefik `PathPrefix(/backends/xatodo)` + stripprefix; the web container mounts at `/apps/xatodo`
+- Routing: traefik `PathPrefix(/backends/xatodo)` + stripprefix
 - Data: `./data` mounted at `/app/data` (sqlite database files)
 - Config: `./server/config.toml` mounted read-only, resolved via `XATODO_CONFIG`
 
@@ -139,7 +139,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/releas
 This project is also a [superlive](https://github.com/drodreo/superlive) component:
 
 - `manifest.json` declares the component (id, namespace, entry points, menu entry)
-- `ui/public/surface.json` provides the declarative surface UI; the same React tree mounts as a surface inside the superlive shell or standalone via nginx
+- `ui/public/surface.json` provides the declarative surface UI; the same React tree mounts as a surface inside the superlive shell (the bundle targets the shell environment — it has no standalone web form)
 - `scripts/superlive.build` is the component build entry the shell invokes; `scripts/gen-manifest.py`, `scripts/package-standalone.sh` and `scripts/package-connect.sh` handle packaging
 - The backend talks to the shell over slsdk-rs (spawn env + `/health` + `/events` push channel), so todos update live inside the shell
 
