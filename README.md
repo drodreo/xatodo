@@ -10,8 +10,8 @@ xatodo/
 ├── Dockerfile              # release image (daemon + web static hosting in one container; GHCR)
 ├── manifest.json           # superlive component declaration
 ├── scripts/                # component build / packaging helpers
-│   ├── package-standalone.sh  # builds dist/xatodo-standalone-<version>.zip
-│   └── package-connect.sh     # builds dist/xatodo-connect-<version>.zip
+│   ├── package-standalone.sh  # builds dist/xatodo-standalone-<version>-<platform>.zip
+│   └── package-connect.sh     # builds dist/xatodo-connect-<version>-<platform>.zip
 ├── ui/                     # component UI bundle source (React; mounts as the superlive surface)
 └── server/                 # workspace root
     ├── Cargo.toml          # workspace definition (7 members, see below)
@@ -132,7 +132,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/releas
   ```
 
   Note on the bundled web bundle: it is the superlive component build (entry.js + surface assets, no index.html — the UI targets the shell environment). A browser hitting `/` gets a 404 until a standalone web form exists; the API (`/api/v1`, `/mcp`) is fully functional regardless.
-- **Component packages**: `xatodo-standalone-<version>.zip` and `xatodo-connect-<version>.zip` are attached to the GitHub Release. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package declares `backend.endpoint` / `backend.apikey` as required config fields — the shell gates the first start on them and renders the daemon settings right on the component config page; its display name carries the form marker.
+- **Component packages**: `xatodo-standalone-<version>-<platform>.zip` and `xatodo-connect-<version>-<platform>.zip` are attached to the GitHub Release, built for all three shell platforms — `linux-x86_64`, `macos-aarch64` (Apple Silicon), `windows-x86_64`; import the package matching your platform. On Windows the server binary ships as `bin/xa-todo-<form>.exe` and the manifest launch command references it accordingly. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package declares `backend.endpoint` / `backend.apikey` as required config fields — the shell gates the first start on them and renders the daemon settings right on the component config page; its display name carries the form marker.
 
 ## superlive component integration
 
