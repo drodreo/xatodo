@@ -73,14 +73,20 @@ struct ForwardCtx {
     backend: Arc<BackendCfg>,
 }
 
-/// The connector's outbound client. Proxy-less by design: the backend
-/// endpoint is a user-configured service address the connector must reach
-/// directly — reqwest otherwise inherits ambient proxy settings
-/// (http_proxy/https_proxy env), which silently reroutes intranet
-/// forwarding through a proxy that cannot reach the target.
-fn direct_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .no_proxy()
+/// The connector's outbound client. Proxy behavior is config-driven via
+/// [backend].use_system_proxy: default false disables proxies entirely
+/// (`ClientBuilder::no_proxy`) — the backend endpoint is a user-configured
+/// service address with direct-reach semantics, and reqwest otherwise
+/// inherits ambient proxy settings (http_proxy/https_proxy env), silently
+/// rerouting intranet forwarding through a proxy that cannot reach the
+/// target. true lets the client follow ambient proxy settings, for
+/// networks whose path to the daemon requires a proxy.
+fn outbound_client(use_system_proxy: bool) -> reqwest::Client {
+    let mut builder = reqwest::Client::builder();
+    if !use_system_proxy {
+        builder = builder.no_proxy();
+    }
+    builder
         .build()
         .expect("client build cannot fail with only no_proxy set")
 }
@@ -88,7 +94,7 @@ fn direct_client() -> reqwest::Client {
 /// The forward router: everything under /api/v1 plus /mcp, all methods.
 fn forward_router(backend: BackendCfg) -> Router {
     let ctx = ForwardCtx {
-        client: direct_client(),
+        client: outbound_client(backend.use_system_proxy),
         backend: Arc::new(backend),
     };
     Router::new()
@@ -192,7 +198,7 @@ async fn translate_response(resp: reqwest::Response) -> Response {
 /// [`ServerToClientMessage`]. On stream loss it reconnects with exponential
 /// backoff (2s doubling, capped at 30s; reset on a clean stream end).
 async fn events_bridge(backend: BackendCfg, notifier: A2uiNotifier) {
-    let client = direct_client();
+    let client = outbound_client(backend.use_system_proxy);
     let mut backoff = Duration::from_secs(2);
     loop {
         let url = format!("{}/events", backend.endpoint.trim_end_matches('/'));

@@ -156,9 +156,13 @@ listen = "0.0.0.0:8600"
 # The daemon to front — replace both placeholder values after import:
 # endpoint = the base URL of a running xatodo daemon (no trailing slash)
 # apikey   = one of that daemon's [users.entries] apikeys
+# use_system_proxy (optional, default false): false reaches the daemon
+#   directly, ignoring ambient proxy settings (http_proxy env); set true
+#   only when the network path to the daemon requires a proxy.
 [backend]
 endpoint = "http://localhost:8600"
 apikey = "paste-your-daemon-apikey-here"
+use_system_proxy = false
 
 [users]
 entries = []
@@ -171,13 +175,15 @@ mkdir -p "$STAGING/config"
 cat > "$STAGING/config/en.json" <<'EOF'
 {
   "config.backend.endpoint.label": "Daemon address",
-  "config.backend.apikey.label": "Daemon API key"
+  "config.backend.apikey.label": "Daemon API key",
+  "config.backend.use_system_proxy.label": "Reach the daemon through a proxy"
 }
 EOF
 cat > "$STAGING/config/zh.json" <<'EOF'
 {
   "config.backend.endpoint.label": "Daemon 地址",
-  "config.backend.apikey.label": "Daemon API Key"
+  "config.backend.apikey.label": "Daemon API Key",
+  "config.backend.use_system_proxy.label": "通过代理访问 Daemon"
 }
 EOF
 

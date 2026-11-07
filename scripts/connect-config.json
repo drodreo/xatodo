@@ -23,6 +23,18 @@
       "restart_required": true,
       "sensitive": true,
       "group": "backend"
+    },
+    {
+      "key": "backend.use_system_proxy",
+      "label": "config.backend.use_system_proxy.label",
+      "type": "boolean",
+      "default": false,
+      "required": false,
+      "options": null,
+      "format": null,
+      "restart_required": true,
+      "sensitive": false,
+      "group": "backend"
     }
   ],
   "i18n": {
