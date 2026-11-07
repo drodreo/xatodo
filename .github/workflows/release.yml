@@ -92,10 +92,40 @@ jobs:
           f="docs/release-notes/${GITHUB_REF_NAME#v}.md"
           [ -f "$f" ] || : > "$f"   # missing notes ship empty rather than fail the release
           echo "path=$f" >> "$GITHUB_OUTPUT"
+      # Version manifests for the shell's component update check: each form
+      # (standalone/connect) gets one, referenced by the package manifests'
+      # update.manifest_url through the version-less latest/download redirect
+      - name: Generate version manifests
+        run: |
+          python3 - "${GITHUB_REF_NAME}" "${{ steps.notes.outputs.path }}" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          tag, notes_path = sys.argv[1], sys.argv[2]
+          ver = tag.lstrip("v")
+          notes = Path(notes_path).read_text(encoding="utf-8")
+          repo = "drodreo/xatodo"
+          platforms = ["linux-x86_64", "macos-aarch64", "windows-x86_64"]
+
+          for form in ("standalone", "connect"):
+              manifest = {
+                  "version": ver,
+                  "notes": notes,
+                  "packages": {
+                      p: f"https://github.com/{repo}/releases/download/{tag}/xatodo-{form}-{ver}-{p}.zip"
+                      for p in platforms
+                  },
+              }
+              out = Path(f"dist/{form}-latest.json")
+              out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+              print(f"wrote {out}")
+          PY
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/xatodo-standalone-*.zip
             dist/xatodo-connect-*.zip
+            dist/standalone-latest.json
+            dist/connect-latest.json
           body_path: ${{ steps.notes.outputs.path }}

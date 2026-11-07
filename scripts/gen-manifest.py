@@ -135,6 +135,14 @@ def main() -> None:
         "(fields + i18n) woven into manifest.config verbatim; omit for "
         "zero-config components",
     )
+    parser.add_argument(
+        "--update-url",
+        default=None,
+        help="optional version-manifest URL woven into manifest.update "
+        "({manifest_url}); components declaring it get the shell's update "
+        "check button, and the URL must serve the version manifest JSON "
+        "({version, notes, packages{platform: zip-url}})",
+    )
     args = parser.parse_args()
 
     # Pre-flight checks (aligned with slsdk manifest.rs validate; errors fire
@@ -201,6 +209,7 @@ def main() -> None:
         "routes": [{"path": "/", "title": args.display_name}],
         "launch": {"command": args.launch_command, "args": []},
         "config": config_decl,
+        "update": {"manifest_url": args.update_url} if args.update_url else None,
         "files": files,
     }
 
