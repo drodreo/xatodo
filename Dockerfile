@@ -9,9 +9,8 @@
 #
 # Data mount (sqlite): -v ./data:/app/data
 #
-# The internal deployment forms stay untouched: server/Dockerfile (API
-# container with a mounted config) and ui/Dockerfile (nginx static
-# container).
+# The internal deployment form stays untouched: server/Dockerfile (API
+# container with a mounted config).
 
 # ---- Stage 1: daemon binary (workspace deps core/entity/migration come
 #      along; zero superlive dependency) ----
