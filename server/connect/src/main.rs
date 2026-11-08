@@ -99,12 +99,10 @@ struct ForwardCtx {
 }
 
 /// The connector's outbound client. Proxy behavior is config-driven via
-/// [backend].use_system_proxy: default false disables proxies entirely
-/// (`ClientBuilder::no_proxy`) — the backend endpoint is a user-configured
-/// service address with direct-reach semantics, and reqwest otherwise
-/// inherits ambient proxy settings (http_proxy/https_proxy env), silently
-/// rerouting intranet forwarding through a proxy that cannot reach the
-/// target. true lets the client follow ambient proxy settings, for
+/// [backend].use_system_proxy: default false forces direct connections
+/// (`ClientBuilder::no_proxy`) — the backend is a user-configured intranet
+/// service address. true lets the client follow ambient proxy settings
+/// (http_proxy/https_proxy env vars + OS system proxy settings) for
 /// networks whose path to the daemon requires a proxy.
 fn outbound_client(use_system_proxy: bool) -> reqwest::Client {
     let mut builder = reqwest::Client::builder();
