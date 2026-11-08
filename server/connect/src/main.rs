@@ -412,4 +412,386 @@ mod tests {
 
         serve_info.shutdown();
     }
+    use std::sync::Mutex;
+
+    /// One request as seen by the fake daemon (the forwarder's inbound face).
+    #[derive(Debug, Clone)]
+    struct Recorded {
+        method: String,
+        path_and_query: String,
+        authorization: Option<String>,
+        content_type: Option<String>,
+        body: String,
+    }
+
+    type RecordLog = Arc<Mutex<Vec<Recorded>>>;
+
+    /// Fake daemon state: the request log + the canned response.
+    type FakeState = (RecordLog, StatusCode, Arc<str>);
+
+    /// Captures every request aspect the forward contract cares about and
+    /// answers with the canned response (status + application/json body).
+    async fn capture(
+        State((log, status, payload)): State<FakeState>,
+        method: Method,
+        uri: Uri,
+        headers: HeaderMap,
+        body: Bytes,
+    ) -> Response {
+        log.lock().expect("record log poisoned").push(Recorded {
+            method: method.to_string(),
+            path_and_query: uri
+                .path_and_query()
+                .map(|pq| pq.as_str().to_string())
+                .unwrap_or_else(|| uri.path().to_string()),
+            authorization: headers
+                .get(axum::http::header::AUTHORIZATION)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned),
+            content_type: headers
+                .get(axum::http::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned),
+            body: String::from_utf8_lossy(&body).to_string(),
+        });
+        (
+            status,
+            [(axum::http::header::CONTENT_TYPE, "application/json")],
+            payload.as_ref().to_owned(),
+        )
+            .into_response()
+    }
+
+    /// Serves a router on an ephemeral localhost port; returns the address.
+    /// The serve task is dropped when the test runtime shuts down.
+    async fn serve(router: Router) -> std::net::SocketAddr {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("ephemeral bind");
+        let addr = listener.local_addr().expect("local_addr");
+        tokio::spawn(async move {
+            axum::serve(listener, router)
+                .await
+                .expect("test server should stay up");
+        });
+        addr
+    }
+
+    fn fake_daemon(log: RecordLog, status: StatusCode, payload: &str) -> Router {
+        Router::new()
+            .route("/{*rest}", axum::routing::any(capture))
+            .with_state((log, status, Arc::from(payload)))
+    }
+
+    fn backend_cfg(endpoint: String) -> BackendCfg {
+        BackendCfg {
+            endpoint,
+            apikey: API_KEY.to_string(),
+            use_system_proxy: false,
+        }
+    }
+
+    const API_KEY: &str = "test-api-key";
+
+    // ===== REST/MCP forwarding =====
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn forwards_method_path_query_and_bearer_auth_to_backend() {
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let daemon = serve(fake_daemon(log.clone(), StatusCode::OK, r#"{"ok":true}"#)).await;
+        let connector = serve(forward_router(backend_cfg(format!("http://{daemon}")))).await;
+
+        let client = outbound_client(false);
+        let resp = client
+            .get(format!("http://{connector}/api/v1/todo/list?done=false"))
+            .header(axum::http::header::AUTHORIZATION, "Bearer shell-token")
+            .send()
+            .await
+            .expect("connector request should succeed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+            Some("application/json"),
+            "the daemon's content-type must pass back"
+        );
+        assert_eq!(resp.text().await.expect("body"), r#"{"ok":true}"#);
+
+        let log = log.lock().expect("record log poisoned");
+        assert_eq!(log.len(), 1, "exactly one backend hit");
+        let rec = &log[0];
+        assert_eq!(rec.method, "GET");
+        assert_eq!(rec.path_and_query, "/api/v1/todo/list?done=false");
+        assert_eq!(
+            rec.authorization.as_deref(),
+            Some("Bearer test-api-key"),
+            "the backend must see the configured apikey, not the shell token"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn forwards_post_body_and_passes_non_default_status_back() {
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let body = r#"{"title":"write tests"}"#;
+        let daemon = serve(fake_daemon(log.clone(), StatusCode::CREATED, r#"{"id":7}"#)).await;
+        let connector = serve(forward_router(backend_cfg(format!("http://{daemon}")))).await;
+
+        let client = outbound_client(false);
+        let resp = client
+            .post(format!("http://{connector}/api/v1/todo"))
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(body.to_owned())
+            .send()
+            .await
+            .expect("connector request should succeed");
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        assert_eq!(resp.text().await.expect("body"), r#"{"id":7}"#);
+
+        let log = log.lock().expect("record log poisoned");
+        assert_eq!(log.len(), 1);
+        let rec = &log[0];
+        assert_eq!(rec.method, "POST");
+        assert_eq!(rec.path_and_query, "/api/v1/todo");
+        assert_eq!(rec.body, body, "the request body must pass through");
+        assert_eq!(rec.content_type.as_deref(), Some("application/json"));
+        assert_eq!(rec.authorization.as_deref(), Some("Bearer test-api-key"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn backend_error_status_passes_through_unchanged() {
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let daemon = serve(fake_daemon(
+            log.clone(),
+            StatusCode::NOT_FOUND,
+            r#"{"error":"no todo"}"#,
+        ))
+        .await;
+        let connector = serve(forward_router(backend_cfg(format!("http://{daemon}")))).await;
+
+        let client = outbound_client(false);
+        let resp = client
+            .get(format!("http://{connector}/api/v1/todo/999"))
+            .send()
+            .await
+            .expect("connector request should succeed");
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        assert_eq!(resp.text().await.expect("body"), r#"{"error":"no todo"}"#);
+        assert_eq!(log.lock().expect("record log poisoned").len(), 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn unreachable_backend_yields_502_with_error_body() {
+        // A bound-then-dropped listener = a closed port: connect refused.
+        let dead_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("ephemeral bind");
+        let dead = dead_listener.local_addr().expect("local_addr");
+        drop(dead_listener);
+
+        let connector = serve(forward_router(backend_cfg(format!("http://{dead}")))).await;
+        let client = outbound_client(false);
+        let resp = client
+            .get(format!("http://{connector}/api/v1/todo/list"))
+            .send()
+            .await
+            .expect("the connector itself must answer");
+
+        assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
+        let body = resp.text().await.expect("body");
+        assert!(
+            body.contains("backend unreachable"),
+            "error body should name the failure, got: {body}"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mcp_post_is_forwarded_the_same_way() {
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let body = r#"{"jsonrpc":"2.0","id":1}"#;
+        let daemon = serve(fake_daemon(
+            log.clone(),
+            StatusCode::OK,
+            r#"{"jsonrpc":"2.0"}"#,
+        ))
+        .await;
+        let connector = serve(forward_router(backend_cfg(format!("http://{daemon}")))).await;
+
+        let client = outbound_client(false);
+        let resp = client
+            .post(format!("http://{connector}/mcp"))
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(body.to_owned())
+            .send()
+            .await
+            .expect("connector request should succeed");
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.text().await.expect("body"), r#"{"jsonrpc":"2.0"}"#);
+
+        let log = log.lock().expect("record log poisoned");
+        assert_eq!(log.len(), 1);
+        let rec = &log[0];
+        assert_eq!(rec.method, "POST");
+        assert_eq!(rec.path_and_query, "/mcp");
+        assert_eq!(rec.body, body);
+        assert_eq!(rec.authorization.as_deref(), Some("Bearer test-api-key"));
+    }
+
+    // ===== use_system_proxy =====
+
+    /// Proxy behavior is env-driven and captured once at client build time,
+    /// so both sides run inside this one test: env mutation is process
+    /// global, but every other test builds `no_proxy` clients (which never
+    /// read env — that is the whole point of the default), and the rest of
+    /// the workspace's tests run in separate test binaries. The env window
+    /// lives only between the set/remove pair below.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn use_system_proxy_off_bypasses_env_proxy_and_on_follows_it() {
+        // A dead proxy: a bound-then-dropped listener = a closed port, so a
+        // proxied request dies at the connect stage (connection refused).
+        let dead_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("ephemeral bind");
+        let dead = dead_listener.local_addr().expect("local_addr");
+        drop(dead_listener);
+
+        // A real backend on a live port.
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let backend = serve(fake_daemon(log, StatusCode::OK, "{}")).await;
+        let target = format!("http://{backend}/api/v1/todo/list");
+
+        std::env::set_var("http_proxy", format!("http://{dead}"));
+        // Keep an ambient NO_PROXY (e.g. a developer's local proxy config)
+        // from bypassing the dead proxy on the `on` side.
+        std::env::set_var("NO_PROXY", "");
+
+        // Both clients are built while the env window is open: the `on`
+        // client captures the ambient proxy in ClientBuilder::build.
+        let direct = outbound_client(false);
+        let proxied = outbound_client(true);
+
+        // off (the serde default): no_proxy() disables proxies entirely —
+        // the ambient http_proxy must be bypassed and the request must land
+        // on the real backend.
+        let resp = direct
+            .get(&target)
+            .send()
+            .await
+            .expect("proxy-off request should reach the backend directly");
+        assert_eq!(resp.status(), StatusCode::OK, "direct request must arrive");
+
+        std::env::remove_var("http_proxy");
+        std::env::remove_var("NO_PROXY");
+
+        // on: the client follows the captured ambient proxy, which is dead —
+        // the request must fail at the connect stage.
+        let err = proxied
+            .get(&target)
+            .send()
+            .await
+            .expect_err("proxied request must fail on the dead proxy");
+        assert!(
+            err.is_connect(),
+            "expected a connect-stage failure via the dead proxy, got: {err}"
+        );
+    }
+
+    // ===== events bridge =====
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn events_bridge_relays_ndjson_lines_into_the_notifier() {
+        // Consumer side: the slsdk /events plane fed by the notifier (the
+        // same public router the shell bridges against).
+        let notifier = A2uiNotifier::new();
+        let consumer = serve(slsdk_rs::events::events_router(notifier.clone())).await;
+
+        // Producer side: a fake daemon whose /events pushes one NDJSON line
+        // then ends the stream (the relay lifetime completes on its own).
+        let msg = ServerToClientMessage::update_data_model("s1", None, serde_json::json!({}));
+        let line = serde_json::to_string(&msg).expect("serialize");
+        let daemon = serve(Router::new().route(
+            "/events",
+            axum::routing::get(move |headers: HeaderMap| async move {
+                if headers
+                    .get(axum::http::header::AUTHORIZATION)
+                    .and_then(|v| v.to_str().ok())
+                    != Some("Bearer test-api-key")
+                {
+                    return StatusCode::UNAUTHORIZED.into_response();
+                }
+                (
+                    StatusCode::OK,
+                    [(axum::http::header::CONTENT_TYPE, "application/x-ndjson")],
+                    format!("{line}\n"),
+                )
+                    .into_response()
+            }),
+        ))
+        .await;
+
+        // Open the consumer stream first and wait for its broadcast receiver
+        // to register: the plane has no replay, so a push with zero
+        // subscribers is silently dropped.
+        let consumer_resp = outbound_client(false)
+            .get(format!("http://{consumer}/events"))
+            .send()
+            .await
+            .expect("consumer stream should open");
+        assert_eq!(consumer_resp.status(), StatusCode::OK);
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while notifier.subscriber_count() == 0 {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("consumer subscriber should register in time");
+
+        // Relay: one subscribe_stream lifetime over the fake daemon.
+        let client = outbound_client(false);
+        let relay = {
+            let notifier = notifier.clone();
+            let url = format!("http://{daemon}/events");
+            tokio::spawn(async move { subscribe_stream(&client, &url, API_KEY, &notifier).await })
+        };
+
+        // The relayed message must arrive on the consumer stream with its
+        // semantics intact.
+        let mut stream = consumer_resp.bytes_stream();
+        let chunk = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .expect("relay should produce a line in time")
+            .expect("consumer stream should yield a chunk")
+            .expect("consumer chunk read should succeed");
+        let got: ServerToClientMessage =
+            serde_json::from_str(String::from_utf8_lossy(&chunk).trim())
+                .expect("relayed line should parse");
+        assert_eq!(got, msg, "relayed message semantics");
+        assert!(
+            relay.await.expect("relay task").is_ok(),
+            "one clean stream end"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn events_bridge_reports_rejection_on_missing_event_plane() {
+        // A daemon without an event-plane endpoint: the 404 must surface as
+        // the "rejected by daemon" error (the backoff-retried shape).
+        let log: RecordLog = Arc::new(Mutex::new(Vec::new()));
+        let daemon = serve(fake_daemon(log, StatusCode::NOT_FOUND, "{}")).await;
+
+        let client = outbound_client(false);
+        let err = subscribe_stream(
+            &client,
+            &format!("http://{daemon}/events"),
+            API_KEY,
+            &A2uiNotifier::new(),
+        )
+        .await
+        .expect_err("a 404 event plane must be an error");
+        assert!(err.to_string().contains("rejected by daemon"), "got: {err}");
+    }
 }
