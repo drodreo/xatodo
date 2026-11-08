@@ -412,7 +412,7 @@ mod tests {
 
         serve_info.shutdown();
     }
-    use std::sync::Mutex;
+    use tokio::sync::Mutex;
 
     /// One request as seen by the fake daemon (the forwarder's inbound face).
     #[derive(Debug, Clone)]
@@ -438,7 +438,7 @@ mod tests {
         headers: HeaderMap,
         body: Bytes,
     ) -> Response {
-        log.lock().expect("record log poisoned").push(Recorded {
+        log.lock().await.push(Recorded {
             method: method.to_string(),
             path_and_query: uri
                 .path_and_query()
@@ -519,7 +519,7 @@ mod tests {
         );
         assert_eq!(resp.text().await.expect("body"), r#"{"ok":true}"#);
 
-        let log = log.lock().expect("record log poisoned");
+        let log = log.lock().await;
         assert_eq!(log.len(), 1, "exactly one backend hit");
         let rec = &log[0];
         assert_eq!(rec.method, "GET");
@@ -550,7 +550,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.text().await.expect("body"), r#"{"id":7}"#);
 
-        let log = log.lock().expect("record log poisoned");
+        let log = log.lock().await;
         assert_eq!(log.len(), 1);
         let rec = &log[0];
         assert_eq!(rec.method, "POST");
@@ -580,7 +580,7 @@ mod tests {
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
         assert_eq!(resp.text().await.expect("body"), r#"{"error":"no todo"}"#);
-        assert_eq!(log.lock().expect("record log poisoned").len(), 1);
+        assert_eq!(log.lock().await.len(), 1);
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -632,7 +632,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
         assert_eq!(resp.text().await.expect("body"), r#"{"jsonrpc":"2.0"}"#);
 
-        let log = log.lock().expect("record log poisoned");
+        let log = log.lock().await;
         assert_eq!(log.len(), 1);
         let rec = &log[0];
         assert_eq!(rec.method, "POST");
