@@ -13,6 +13,10 @@ slsdk-rs = { workspace = true }
 # router assembly / middleware types
 axum = { workspace = true }
 
+# config declaration parsing (make_manifest_with_config, compile-time pinned
+# to scripts/connect-config.json)
+serde_json = { workspace = true }
+
 # general: error handling / logging / types
 anyhow = { workspace = true }
 log = { workspace = true }
@@ -24,5 +28,4 @@ sea-orm = { workspace = true }
 [dev-dependencies]
 xa-todo-migration = { workspace = true }
 tokio = { workspace = true }
-serde_json = { workspace = true }
 tower = { workspace = true, features = ["util"] }
