@@ -17,6 +17,7 @@
 FROM rust:1-slim AS rust-builder
 WORKDIR /build
 COPY server/ ./server/
+COPY scripts/ ./scripts/
 WORKDIR /build/server
 # The sqlite / rustls dependency chain is pure Rust — no extra system libs
 RUN cargo build --release -p xa-todo-daemon
