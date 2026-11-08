@@ -26,7 +26,7 @@ mod test_support;
 /// (namespace).
 pub const COMPONENT_ID: &str = "xatodo";
 
-use slsdk_rs::{ComponentManifest, LaunchConfig, UiDeclaration, UiType};
+use slsdk_rs::{ComponentConfig, ComponentManifest, LaunchConfig, UiDeclaration, UiType};
 
 /// Synthesized manifest: the serve() contract only consumes id / version
 /// (in the /health response body); the component process holds no manifest
@@ -59,4 +59,33 @@ pub fn make_manifest() -> ComponentManifest {
         files: Vec::new(),
         config: None,
     }
+}
+
+/// Connect-form manifest: same synthesized shape as [`make_manifest`] plus
+/// the config declaration. The declaration is compiled in from the same file
+/// the packaging chain consumes (`scripts/connect-config.json` →
+/// gen-manifest.py weaves it into the shipped manifest.json the shell config
+/// page renders from) — one source of truth, so the process-side declaration
+/// can never drift from the shipped one.
+///
+/// Why not reuse [`make_manifest`] here: standalone stays config-less (its
+/// shipped manifest declares no config section, per the packaging script),
+/// and slsdk only mounts `GET/PUT /config` when the manifest declares a
+/// config section AND a `ConfigIntegration` is provided — weaving connect's
+/// backend fields into the shared manifest would hand standalone a false
+/// declaration.
+///
+/// Parse failures are an `expect`, not a degrade: a broken declaration file
+/// silently falling back to `config: None` would resurrect exactly the 404
+/// this wiring exists to fix. The file is compile-time pinned and parse-
+/// asserted in tests, so an invalid edit fails CI long before any binary
+/// ships.
+pub fn make_manifest_with_config() -> ComponentManifest {
+    let mut manifest = make_manifest();
+    let raw = include_str!("../../../scripts/connect-config.json");
+    let config: ComponentConfig = serde_json::from_str(raw).expect(
+        "bundled connect-config.json (the packaging chain's own source file) must stay valid",
+    );
+    manifest.config = Some(config);
+    manifest
 }

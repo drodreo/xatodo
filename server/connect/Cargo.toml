@@ -32,3 +32,7 @@ toml = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
+
+# Tests: temp dir for the write-back config.toml (config endpoint regression)
+[dev-dependencies]
+tempfile = "3"

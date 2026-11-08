@@ -15,10 +15,15 @@
 //!   event-plane endpoint (404) simply keeps the bridge retrying at the
 //!   capped interval: harmless no-op, REST/MCP forwarding is unaffected.
 //!
-//! manifest: self-reported via make_manifest() (id=xatodo — the shell
-//! matches by id; the same constant every other form reports).
+//! manifest: self-reported via make_manifest_with_config() (id=xatodo — the
+//! shell matches by id; the same constant every other form reports). The
+//! config declaration is compiled in from the packaging chain's own
+//! connect-config.json, so the process-side declaration matches the shipped
+//! manifest.json the shell config page renders from.
 //! config: [backend] is required; listen / [users] / database_url are parsed
-//! (rigid schema) but not consumed.
+//! (rigid schema) but not consumed. GET/PUT /config is mounted (manifest
+//! declaration + ConfigIntegration, write-back to config.toml in the working
+//! directory — the same file Config::load reads on the next start).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -67,8 +72,19 @@ async fn run() -> anyhow::Result<()> {
     tokio::spawn(events_bridge(backend.clone(), notifier.clone()));
 
     let app = forward_router(backend);
-    let manifest = integration::make_manifest();
-    let serve_info = slsdk_rs::serve_with_events(app, &manifest, None, notifier).await?;
+    // Config declaration + integration both present → slsdk mounts the
+    // standard GET/PUT /config endpoint (the shell's config save path). The
+    // declaration is the same file the packaging chain weaves into the
+    // shipped manifest.json; the file path matches Config::load's resolution
+    // (config.toml in the component's working directory = install directory
+    // under the shell), so a write-back is picked up by the next start.
+    // All three declared fields are restart_required (no on_change hook).
+    let manifest = integration::make_manifest_with_config();
+    let config = slsdk_rs::ConfigIntegration {
+        path: std::path::PathBuf::from("config.toml"),
+        on_change: None,
+    };
+    let serve_info = slsdk_rs::serve_with_events(app, &manifest, Some(config), notifier).await?;
     info!("Connector service started: {}", serve_info.endpoint);
     serve_info.wait().await?;
     Ok(())
@@ -264,4 +280,133 @@ async fn subscribe_stream(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slsdk_rs::Endpoint;
+
+    /// Regression anchor for the "component config endpoint returned 404"
+    /// incident: the connector must mount the standard GET/PUT /config
+    /// endpoint. slsdk only mounts it when BOTH sides are present — the
+    /// manifest declares a config section (make_manifest_with_config, the
+    /// packaging chain's own declaration) AND a ConfigIntegration is handed
+    /// to serve_with_events. Full save path under one serving instance:
+    /// GET 200 → PUT 200 → write-back landed in config.toml → read-back
+    /// returns the new value.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn config_endpoint_mounts_and_persists_write_back() {
+        // The declaration must survive the compile-time round trip: same
+        // field count the packaging chain ships (endpoint/apikey/
+        // use_system_proxy).
+        let manifest = integration::make_manifest_with_config();
+        let config = manifest
+            .config
+            .as_ref()
+            .expect("connect manifest declares a config section");
+        assert_eq!(
+            config.fields.len(),
+            3,
+            "declaration must match scripts/connect-config.json"
+        );
+        assert_eq!(config.fields[0].key, "backend.endpoint");
+
+        // Serve the same wiring run() uses, with the write-back target in a
+        // temp dir (the production path convention is config.toml in the
+        // working directory; tests may pass an absolute path). No
+        // SL_ENDPOINT/SL_TOKEN in the test process → random-port debug
+        // serving without auth, unless the environment injects a token
+        // (honored per-request, never mutated — tests run in parallel).
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        std::fs::write(
+            &config_path,
+            // apikey must be non-empty: the endpoint's merged-state
+            // validation treats empty strings on required fields as missing
+            // (first-install semantics), so an empty-seed PUT would 400 by
+            // design.
+            "[backend]\nendpoint = \"http://placeholder\"\napikey = \"test-key\"\n",
+        )
+        .unwrap();
+
+        let serve_info = slsdk_rs::serve_with_events(
+            axum::Router::new(),
+            &manifest,
+            Some(slsdk_rs::ConfigIntegration {
+                path: config_path.clone(),
+                on_change: None,
+            }),
+            A2uiNotifier::new(),
+        )
+        .await
+        .expect("serve assembly succeeds");
+
+        let addr = match serve_info.endpoint {
+            Endpoint::Tcp { addr } => addr,
+            other => panic!("expected tcp debug endpoint, got {other}"),
+        };
+        let base = format!("http://{addr}");
+        let token = std::env::var(slsdk_rs::ENV_TOKEN).ok();
+        let client = reqwest::Client::new();
+
+        // 1. GET /config: the mounted endpoint answers 200 — this exact
+        //    request was the 404 the shell surfaced ("component config
+        //    endpoint returned 404").
+        let mut get = client.get(format!("{base}/config"));
+        if let Some(t) = &token {
+            get = get.bearer_auth(t);
+        }
+        let resp = get.send().await.unwrap();
+        let status = resp.status();
+        assert_eq!(status, reqwest::StatusCode::OK, "GET /config must not 404");
+        let merged: serde_json::Value =
+            serde_json::from_slice(&resp.bytes().await.unwrap()).unwrap();
+        assert_eq!(
+            merged["values"]["backend.endpoint"], "http://placeholder",
+            "GET returns the file's current value (flat dotted keys)"
+        );
+
+        // 2. PUT /config with a legal value: 200 + the write-back reaches
+        //    config.toml (preserving unrecognized sections). The body is
+        //    serialized by hand: the workspace reqwest has no `json`
+        //    feature (forwarding passes raw bytes) and tests don't widen it.
+        let mut put = client
+            .put(format!("{base}/config"))
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(
+                serde_json::to_vec(&serde_json::json!({
+                    "backend.endpoint": "http://192.168.2.40"
+                }))
+                .unwrap(),
+            );
+        if let Some(t) = &token {
+            put = put.bearer_auth(t);
+        }
+        let resp = put.send().await.unwrap();
+        let status = resp.status();
+        assert_eq!(status, reqwest::StatusCode::OK, "PUT /config must succeed");
+        let written = std::fs::read_to_string(&config_path).unwrap();
+        assert!(
+            written.contains("http://192.168.2.40"),
+            "write-back must land in config.toml, got: {written}"
+        );
+        assert!(
+            written.contains("apikey"),
+            "unrecognized sections are preserved on write-back, got: {written}"
+        );
+
+        // 3. Read-back closes the loop: the endpoint now returns the new
+        //    value (same shape the shell refreshes from after a save).
+        let mut get = client.get(format!("{base}/config"));
+        if let Some(t) = &token {
+            get = get.bearer_auth(t);
+        }
+        let resp = get.send().await.unwrap();
+        let merged: serde_json::Value =
+            serde_json::from_slice(&resp.bytes().await.unwrap()).unwrap();
+        assert_eq!(merged["values"]["backend.endpoint"], "http://192.168.2.40");
+
+        serve_info.shutdown();
+    }
 }
