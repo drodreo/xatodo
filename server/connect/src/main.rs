@@ -165,7 +165,7 @@ async fn forward(
     }
 
     match req.send().await {
-        Ok(resp) => translate_response(resp).await,
+        Ok(resp) => translate_response(&method, resp).await,
         Err(e) => {
             // Full source chain: the top-level reqwest display alone ("error
             // sending request for url") hides whether the death was a refused
@@ -188,9 +188,12 @@ async fn forward(
 
 /// Passes the daemon's response back: status + body + content-type (every
 /// other transport header is the connector's own business).
-async fn translate_response(resp: reqwest::Response) -> Response {
+async fn translate_response(method: &Method, resp: reqwest::Response) -> Response {
     let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let content_type = resp.headers().get(reqwest::header::CONTENT_TYPE).cloned();
+    // The URL is needed in the read-failure log below, and bytes() consumes
+    // the response — take a cheap clone (Arc under the hood) first.
+    let url = resp.url().clone();
     match resp.bytes().await {
         Ok(bytes) => {
             let mut builder = Response::builder().status(status);
@@ -208,7 +211,7 @@ async fn translate_response(resp: reqwest::Response) -> Response {
                 })
         }
         Err(e) => {
-            warn!("Backend response read failed: {e}");
+            warn!("Backend response read failed {method} {url}: {e}");
             (
                 StatusCode::BAD_GATEWAY,
                 Json(json!({ "error": format!("backend response read failed: {e}") })),
