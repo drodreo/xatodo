@@ -11,6 +11,10 @@ path = "src/main.rs"
 xa-todo-core = { workspace = true }
 xa-todo-entity = { workspace = true }
 xa-todo-migration = { workspace = true }
+xa-todo-integration = { workspace = true }
+
+# event plane (/events NDJSON stream for the connect form)
+slsdk-rs = { workspace = true }
 
 # web stack
 axum = { workspace = true }
@@ -34,3 +38,5 @@ sea-orm = { workspace = true }
 # Tests: tower oneshot (ServiceExt) for the static-hosting router tests
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
+futures-util = { workspace = true }
+tempfile = "3"
