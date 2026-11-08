@@ -52,6 +52,15 @@ async fn main() {
 async fn run() -> anyhow::Result<()> {
     let cfg = Config::load().await?;
     let backend = cfg.require_backend()?.clone();
+    info!(
+        "Backend: endpoint={}, system proxy {}",
+        backend.endpoint,
+        if backend.use_system_proxy {
+            "on"
+        } else {
+            "off (direct)"
+        }
+    );
 
     let notifier = A2uiNotifier::new();
     // Events bridge: daemon event plane → slsdk notifier (→ shell surfaces)
@@ -151,7 +160,7 @@ async fn forward(
                 chain.push_str(&format!(": {s}"));
                 src = s.source();
             }
-            warn!("Forward {} {} failed: {chain}", method, uri.path());
+            warn!("Forward {method} {url} failed: {chain}");
             (
                 StatusCode::BAD_GATEWAY,
                 Json(json!({ "error": format!("backend unreachable: {chain}") })),
@@ -209,7 +218,7 @@ async fn events_bridge(backend: BackendCfg, notifier: A2uiNotifier) {
                 backoff = Duration::from_secs(2);
             }
             Err(e) => {
-                warn!("Events bridge: {e}; retrying in {:?}", backoff);
+                warn!("Events bridge: {url} failed: {e}; retrying in {backoff:?}");
             }
         }
         tokio::time::sleep(backoff).await;
