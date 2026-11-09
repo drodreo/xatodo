@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 
 [workspace.dependencies]
@@ -22,7 +22,7 @@ xa-todo-core = { path = "core" }
 xa-todo-integration = { path = "integration" }
 
 # ---- HTTP client (connect form: daemon forwarder) ----
-reqwest = { version = "0.12", default-features = false, features = ["stream"] }
+reqwest = { version = "0.13", features = ["stream"] }
 futures-util = "0.3"
 
 # ---- B-plane contract SDK (used by the module-4 componentization) ----

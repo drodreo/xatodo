@@ -52,6 +52,6 @@ role = "assistant"
 # [backend]
 # endpoint = "http://localhost:8600"
 # apikey = "changeme-owner"
-# use_system_proxy = false  # false (default) = direct reach, ignoring
-#                           # ambient proxy settings; true only when the
-#                           # path to the daemon requires a proxy
+# use_system_proxy = false  # false (default) = direct reach; true = follow
+#                           # ambient proxies (env + OS system proxy), for
+#                           # networks whose path to the daemon needs a proxy
