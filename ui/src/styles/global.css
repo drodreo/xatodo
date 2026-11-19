@@ -161,23 +161,6 @@
 }
 
 /* ===== App layout ===== */
-.xatodo-header {
-  align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.xatodo-brand {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
 .xatodo-main {
   flex: 1;
 }
