@@ -63,9 +63,6 @@ export default function App(_props: AppProps) {
 
   return (
     <div className="xatodo-app">
-      <header className="xatodo-header">
-        <span className="xatodo-brand">XaTodo</span>
-      </header>
       <main className="xatodo-main">
         <TodoPage />
       </main>
