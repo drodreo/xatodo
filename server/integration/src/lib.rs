@@ -44,8 +44,8 @@ pub fn make_manifest() -> ComponentManifest {
         namespace: crate::COMPONENT_ID.to_string(),
         display_name: "xatodo".to_string(),
         ui: Some(UiDeclaration {
-            ui_type: UiType::Surface,
-            entry: "surface.json".to_string(),
+            ui_type: UiType::Module,
+            entry: "entry.js".to_string(),
         }),
         menu: None,
         routes: Vec::new(),

@@ -6,8 +6,8 @@
  *   shell's App.tsx at startup; parsed lazily (read on the first API call),
  *   and an explicit error is thrown when missing.
  * - SDK: slsdk-ts createClient, with baseUrl pointing at this component's
- *   namespace prefix /api/todo; request paths use the component's own full
- *   contract (/api/v1/...) — after the shell strips /api/todo, the component
+ *   namespace prefix /api/xatodo; request paths use the component's own full
+ *   contract (/api/v1/...) — after the shell strips /api/xatodo, the component
  *   receives its own full path, verbatim identical to standalone form.
  * - PATCH: not in the SDK's five-verb vocabulary; the A-plane protocol is
  *   open HTTP (architecture.md), and the server contract includes PATCH, so
@@ -35,8 +35,10 @@ declare global {
 }
 
 /** This component's namespace prefix on the shell gateway (the shell strips
- * the prefix before forwarding to the component backend) */
-const NAMESPACE_PREFIX = '/api/todo';
+ * the prefix before forwarding to the component backend). Must match the
+ * server's registered namespace (integration COMPONENT_ID / manifest
+ * namespace = "xatodo"). */
+const NAMESPACE_PREFIX = '/api/xatodo';
 
 /** Reads the shell env; missing env is an environment error (the component
  * must run inside the shell, no silent fallback) */
