@@ -7,7 +7,7 @@
  * Component mode needs no login (the shell-injected token is carried
  * uniformly by apiClient); no credential short-circuit logic.
  * Request paths are the component's own full contract /api/v1/... (the shell
- * strips the /api/todo namespace prefix).
+ * strips the /api/xatodo namespace prefix).
  */
 import {
   EMPTY,

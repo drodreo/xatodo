@@ -6,6 +6,11 @@ Collects sha256 fingerprints of all regular files from the staging directory,
 validates the ui entry (fixed name entry.js in the component build form), and
 writes the package-root manifest.json.
 
+The packaged ui declaration (ui_type/entry) defaults to the repo-root
+manifest.json ui section (single source of truth); an explicit CLI value
+disagreeing with the repo-root declaration hard-fails instead of drifting
+silently.
+
 Contract aligned with slsdk-rs/src/manifest.rs:
 - id/namespace are alphanumeric plus hyphen only (validate charset rule)
 - files are relative posix paths + sha256 hex (lowercase), excluding
@@ -29,8 +34,10 @@ from pathlib import Path
 
 ID_NS_RE = re.compile(r"^[A-Za-z0-9-]+$")
 
-# Project root (derived from the script's own location): used to hint about
-# ui/public when the surface entry is missing from the package
+# Project root (derived from the script's own location): the repo-root
+# manifest.json under it is the single source of truth for the packaged
+# ui declaration (ui_type/entry defaults); it is also used to hint about
+# ui/public when a surface entry is missing from the package
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -127,13 +134,18 @@ def main() -> None:
     parser.add_argument(
         "--ui-type",
         choices=["module", "surface"],
-        default="module",
-        help="UI form: module=React bundle (default); surface=A2UI descriptor (rendered by the shell)",
+        default=None,
+        help="UI form: module=React bundle; surface=A2UI descriptor (rendered "
+        "by the shell); defaults to the repo-root manifest.json ui.ui_type "
+        "(single source of truth) — an explicit value disagreeing with it is "
+        "a hard error",
     )
     parser.add_argument(
         "--entry",
         default=None,
-        help="ui entry relative path; defaults: module=entry.js, surface=surface.json",
+        help="ui entry relative path; defaults to the repo-root manifest.json "
+        "ui.entry (single source of truth) — an explicit value disagreeing "
+        "with it is a hard error",
     )
     parser.add_argument(
         "--config",
@@ -178,8 +190,39 @@ def main() -> None:
     if not ui_dir.is_dir():
         sys.exit(f"error: missing ui/ subdirectory (component UI assets must live in the package's ui/): {ui_dir}")
 
-    entry = args.entry or ("entry.js" if args.ui_type == "module" else "surface.json")
-    entry = discover_entry(ui_dir, args.ui_type, entry)
+    # ui declaration single source of truth: the defaults come from the
+    # repo-root manifest.json ui section; an explicit CLI value disagreeing
+    # with the repo-root declaration hard-fails (silent drift here is exactly
+    # how the surface/module misdeclaration shipped)
+    repo_manifest_path = PROJECT_ROOT / "manifest.json"
+    if not repo_manifest_path.is_file():
+        sys.exit(
+            f"error: repo-root manifest.json not found (ui declaration "
+            f"source of truth): {repo_manifest_path}"
+        )
+    try:
+        repo_manifest = json.loads(repo_manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        sys.exit(f"error: repo-root manifest.json is not valid JSON ({repo_manifest_path}): {e}")
+    repo_ui = repo_manifest.get("ui") or {}
+    if not isinstance(repo_ui, dict) or not repo_ui.get("ui_type") or not repo_ui.get("entry"):
+        sys.exit(
+            f"error: repo-root manifest.json has no complete ui section "
+            f"(ui_type/entry): {repo_manifest_path}"
+        )
+    if args.ui_type is not None and args.ui_type != repo_ui["ui_type"]:
+        sys.exit(
+            f"error: --ui-type ({args.ui_type}) disagrees with the repo-root "
+            f"manifest.json ui.ui_type ({repo_ui['ui_type']}); align the two to one truth"
+        )
+    if args.entry is not None and args.entry != repo_ui["entry"]:
+        sys.exit(
+            f"error: --entry ({args.entry}) disagrees with the repo-root "
+            f"manifest.json ui.entry ({repo_ui['entry']}); align the two to one truth"
+        )
+    ui_type = args.ui_type or repo_ui["ui_type"]
+    entry = args.entry or repo_ui["entry"]
+    entry = discover_entry(ui_dir, ui_type, entry)
     # manifest.json has not been written to staging yet, so what is collected
     # here is exactly the final package content
     files = collect_files(staging)

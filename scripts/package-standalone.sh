@@ -12,8 +12,11 @@
 #   ui/**                   full ui build artifact (the shell maps it to the
 #                           /comps/{id}/ static space)
 #
-# Identity note: manifest id / namespace stay "xatodo" / "todo" — the same
-# constants the component process self-reports via /health. The connect-form
+# Identity note: manifest id / namespace both stay "xatodo". The id equals
+# the COMPONENT_ID constant the component process self-reports via /health;
+# the namespace is the shell's dispatch key — the gateway exposes the
+# component under /api/xatodo and the ui apiClient's NAMESPACE_PREFIX must
+# match it. The connect-form
 # package (scripts/package-connect.sh) ships the same id: the two packages
 # are mutually exclusive forms of one logical component, and installing one
 # over the other takes the shell's replace path (config.toml is preserved).
@@ -43,7 +46,7 @@ SERVER_DIR="$ROOT/server"   # cargo workspace root (entity/migration/server crat
 UI_DIR="$ROOT/ui"
 
 COMPONENT_ID="xatodo"
-NAMESPACE="todo"
+NAMESPACE="xatodo"
 DISPLAY_NAME="待办"
 DISPLAY_NAME_EN="Todos"
 BIN_NAME="xa-todo-standalone"
@@ -192,17 +195,17 @@ log "Self-verifying the package (contract checks + set-difference consistency + 
 # prefix — a missing segment becomes a runtime 404 inside the shell (the
 # sl-finance incident showed systematic absence invisible to tsc/build; the
 # only reliable interception point is a packaging-time grep of the artifact)
-# The check accepts both service-path shapes: the full string "/api/todo/xxx"
-# and the base constant "/api/todo" + template concatenation (the ns segment
+# The check accepts both service-path shapes: the full string "/api/xatodo/xxx"
+# and the base constant "/api/xatodo" + template concatenation (the ns segment
 # followed by a slash or a closing quote both match; the regex anchors on
 # quote + ns segment + boundary, naturally avoiding false matches like
-# /api/todoX). grep -c reads all input without early exit, eliminating the
+# /api/xatodoX). grep -c reads all input without early exit, eliminating the
 # grep -q early-exit SIGPIPE misfire against unzip under pipefail (exit 141)
-NS_HITS=$(unzip -p "$ZIP_PATH" ui/entry.js | grep -c -E "[\"']/api/todo(/|[\"'])" || true)
+NS_HITS=$(unzip -p "$ZIP_PATH" ui/entry.js | grep -c -E "[\"']/api/xatodo(/|[\"'])" || true)
 if [ "${NS_HITS:-0}" -gt 0 ]; then
-  log "ns prefix proof: artifact contains /api/todo paths (${NS_HITS} hits) ✓"
+  log "ns prefix proof: artifact contains /api/xatodo paths (${NS_HITS} hits) ✓"
 else
-  die "ns prefix missing: artifact ui/entry.js has no /api/todo paths (guaranteed 404 inside the shell)"
+  die "ns prefix missing: artifact ui/entry.js has no /api/xatodo paths (guaranteed 404 inside the shell)"
 fi
 
 log "Packaging complete: $ZIP_PATH"

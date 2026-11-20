@@ -1,6 +1,6 @@
 # xatodo
 
-A multi-user todo service. Rust + axum + sea-orm, dual REST and MCP entries, Bearer apikey authentication, per-user data isolation — and a [superlive](https://github.com/drodreo/superlive) component (surface UI + lifecycle integration) on top of the same backend.
+A multi-user todo service. Rust + axum + sea-orm, dual REST and MCP entries, Bearer apikey authentication, per-user data isolation — and a [superlive](https://github.com/drodreo/superlive) component (module UI + lifecycle integration) on top of the same backend.
 
 ## Directory structure
 
@@ -12,7 +12,7 @@ xatodo/
 ├── scripts/                # component build / packaging helpers
 │   ├── package-standalone.sh  # builds dist/xatodo-standalone-<version>-<platform>.zip
 │   └── package-connect.sh     # builds dist/xatodo-connect-<version>-<platform>.zip
-├── ui/                     # component UI bundle source (React; mounts as the superlive surface)
+├── ui/                     # component UI bundle source (React; mounts as a superlive in-shell module)
 └── server/                 # workspace root
     ├── Cargo.toml          # workspace definition (7 members, see below)
     ├── Dockerfile          # builds xa-todo-daemon (the docker-resident form)
@@ -131,7 +131,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/releas
     ghcr.io/drodreo/xatodo
   ```
 
-  Note on the bundled web bundle: it is the superlive component build (entry.js + surface assets, no index.html — the UI targets the shell environment). A browser hitting `/` gets a 404 until a standalone web form exists; the API (`/api/v1`, `/mcp`) is fully functional regardless.
+  Note on the bundled web bundle: it is the superlive component build (entry.js module bundle, no index.html — the UI targets the shell environment). A browser hitting `/` gets a 404 until a standalone web form exists; the API (`/api/v1`, `/mcp`) is fully functional regardless.
 - **Component packages**: `xatodo-standalone-<version>-<platform>.zip` and `xatodo-connect-<version>-<platform>.zip` are attached to the GitHub Release, built for all three shell platforms — `linux-x86_64`, `macos-aarch64` (Apple Silicon), `windows-x86_64`; import the package matching your platform. On Windows the server binary ships as `bin/xa-todo-<form>.exe` and the manifest launch command references it accordingly. Both packages carry the same manifest id (`xatodo`) — the component's runtime self-reported identity — so they are two mutually exclusive forms of one component: installing one over the other replaces it (the shell preserves the user-edited `config.toml` on replacement). The connect package declares `backend.endpoint` / `backend.apikey` as required config fields — the shell gates the first start on them and renders the daemon settings right on the component config page. It also declares the optional boolean `backend.use_system_proxy` (default `false`): direct reach ignores ambient proxy settings; enable it to follow ambient proxies (env vars + OS system proxy settings) on networks where the path to the daemon requires a proxy.
 
 ## superlive component integration
@@ -139,7 +139,7 @@ Pushing a `v*` tag runs [.github/workflows/release.yml](.github/workflows/releas
 This project is also a [superlive](https://github.com/drodreo/superlive) component:
 
 - `manifest.json` declares the component (id, namespace, entry points, menu entry)
-- `ui/public/surface.json` provides the declarative surface UI; the same React tree mounts as a surface inside the superlive shell (the bundle targets the shell environment — it has no standalone web form)
+- `ui/` ships as a React module bundle: `manifest.json` declares `ui_type: "module"` with the entry `entry.js`, which the superlive shell mounts as the component UI (the bundle targets the shell environment — it has no standalone web form)
 - `scripts/superlive.build` is the component build entry the shell invokes; `scripts/gen-manifest.py`, `scripts/package-standalone.sh` and `scripts/package-connect.sh` handle packaging
 - The backend talks to the shell over slsdk-rs (spawn env + `/health` + `/events` push channel), so todos update live inside the shell
 
